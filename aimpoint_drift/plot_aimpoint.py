@@ -96,44 +96,6 @@ class AsolBinnedStats(object):
 
         return chipx, chipy
 
-    def plot_chip_vs_time_mpl(self):
-        """
-        Plot Asol binned stats vs. year
-        """
-        plt.close(1)
-        fig, axes = plt.subplots(nrows=2, sharex=True,
-                                 num=1, figsize=(10, 6),
-                                 gridspec_kw={'hspace': 0})
-
-        for ax, xy in izip(axes, ('x', 'y')):
-            rects = []
-            for x0, x1, y0, y1 in izip(self.min['year'], self.max['year'],
-                                       self.min[self.chip_col + xy],
-                                       self.max[self.chip_col + xy]):
-                dx = x1 - x0
-                dy = y1 - y0
-                r = Rectangle((x0, y0), dx, dy)
-                rects.append(r)
-
-            p = PatchCollection(rects, alpha=0.4, facecolors='r',
-                                edgecolors='k')
-            ax.add_collection(p)
-            ax.autoscale()
-            ax.grid('on')
-
-        axes[0].set_title('Aimpoint drift for {}'.format(self.det))
-        axes[0].set_ylabel('CHIP-X')
-        axes[1].set_xlabel('Year')
-        axes[1].set_ylabel('CHIP-Y')
-
-        # Turn off overlapping labels
-        axes[0].get_yticklabels()[0].set_visible(False)
-        axes[1].get_yticklabels()[-1].set_visible(False)
-
-        plt.show()
-
-        return fig, axes
-
     def plot_chip_year_mission(self):
         import bokeh.plotting as bp
 
