@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import re
 import os
 import argparse
 import functools
@@ -8,13 +9,14 @@ from itertools import izip
 import numpy as np
 from astropy.table import Table, Column
 from astropy.time import Time
-import matplotlib.pyplot as plt
 import tables
-
-from matplotlib.patches import Rectangle
-from matplotlib.collections import PatchCollection
+import matplotlib
+import matplotlib.pyplot as plt
 
 from bokeh.models import ColumnDataSource
+import bokeh.plotting as bp
+import mpld3
+
 
 data_root = '.'
 
@@ -55,7 +57,7 @@ class AsolBinnedStats(object):
              'mean': np.mean,
              'p10': functools.partial(np.percentile, q=10),
              'p90': functools.partial(np.percentile, q=90)}
-             
+
     def __init__(self, asol, bin_days):
         t_end = asol[-1]['time'] + 10  # Make sure final bin is just about full
         ibin = (asol['time'] - t_end) // (86400. * bin_days)
@@ -71,6 +73,10 @@ class AsolBinnedStats(object):
     @property
     def chip_col(self):
         return self.det + '_chip'
+
+    @property
+    def det_title(self):
+        return re.sub('-', '', self.det.lower())
 
     def __getattr__(self, attr):
         if attr in self.funcs:
@@ -96,15 +102,15 @@ class AsolBinnedStats(object):
 
         return chipx, chipy
 
-    def plot_chip_year_mission(self):
+    def plot_chip_year(self):
         import bokeh.plotting as bp
 
         det = self.det
         ccd = 'I3' if det.lower().endswith('i') else 'S3'
 
-        bp.output_file("chip_year_mission.html",
-                       title="CHIP vs year for mission")
-        TOOLS = "pan,wheel_zoom,box_zoom,crosshair,reset"
+        bp.output_file('chip_year_{}.html'.format(self.det_title),
+                       title='{} CHIP vs year'.format(det))
+        TOOLS = 'pan,wheel_zoom,box_zoom,crosshair,reset'
 
         ax1 = bp.figure(tools=TOOLS, toolbar_location='left',
                         plot_width=800, height=300,
@@ -135,10 +141,107 @@ class AsolBinnedStats(object):
                          [ax2]])
         bp.save(p)
 
+    def plot_chip_x_y_mpl(self):
+        det = self.det
+        ccd = 'I3' if det.lower().endswith('i') else 'S3'
+
+        outfile = 'chip_x_y_{}.html'.format(self.det_title)
+
+        def concat(colname):
+            out = [getattr(self, prop)[colname]
+                   for prop in ('mean', 'min', 'max')]
+            return np.concatenate(out)
+
+        # year = self.mean['year']
+        # chipx = self.mean[self.chip_col + 'x']
+        # chipy = self.mean[self.chip_col + 'y']
+
+        year = concat('year')
+        chipx = concat(self.chip_col + 'x')
+        chipy = concat(self.chip_col + 'y')
+
+        plt.close(1)
+        fig = plt.figure(1, figsize=(10, 5))
+        ax1 = plt.subplot2grid((2, 4), (0, 0), colspan=2, rowspan=2)
+        ax2 = plt.subplot2grid((2, 4), (0, 2), colspan=2)
+        ax3 = plt.subplot2grid((2, 4), (1, 2), colspan=2)
+
+        cm = matplotlib.cm.get_cmap('YlOrRd')
+
+        opt = dict(c=year, cmap=cm, alpha=0.5)
+        points = ax1.scatter(chipx, chipy, **opt)  # points =
+        ax1.set_xlabel('CHIPX')
+        ax1.set_ylabel('CHIPY')
+        ax1.set_title('{} aimpoint position (CCD {})'.format(det, ccd))
+        ax1.set_aspect('equal', 'datalim')
+        ax1.grid()
+
+        ax2.scatter(year, chipx, **opt)  # points =
+        ax2.set_ylabel('CHIPX')
+        ax2.yaxis.tick_right()
+        ax2.grid()
+
+        ax3.scatter(year, chipy, **opt)  # points =
+        ax3.set_xlabel('Year')
+        ax3.set_ylabel('CHIPY')
+        ax3.yaxis.tick_right()
+        ax3.grid()
+
+        plt.show()
+        mpld3.plugins.connect(fig, mpld3.plugins.LinkedBrush(points))
+
+        mpld3.save_html(fig, outfile)
+
+    def plot_chip_x_y(self):
+        det = self.det
+        ccd = 'I3' if det.lower().endswith('i') else 'S3'
+
+        bp.output_file('chip_x_y_{}.html'.format(self.det_title),
+                       title='CHIP vs year for {}'.format(det))
+        TOOLS = 'pan,wheel_zoom,box_zoom,box_select,crosshair,reset'
+
+        year = self.mean['year']
+        chipx = self.mean[self.chip_col + 'x']
+        chipy = self.mean[self.chip_col + 'y']
+
+        source = ColumnDataSource(data=dict(year=year, chipx=chipx, chipy=chipy))
+
+        width = 500
+        ratio = 1.8
+        size = 4  # pixels
+
+        ax1 = bp.figure(tools=TOOLS, toolbar_location='left',
+                        width=width, height=width,
+                        title='{} aimpoint position (CCD {})'.format(det, ccd),
+                        x_axis_label='CHIPX',
+                        y_axis_label='CHIPY')
+        ax2 = bp.figure(tools=TOOLS, width=width, height=np.int(width // ratio),
+                        x_axis_label='Year',
+                        y_axis_label='CHIPX')
+        ax3 = bp.figure(tools=TOOLS, width=width, height=np.int(width // ratio),
+                        x_axis_label='Year',
+                        y_axis_label='CHIPY')
+
+        ax1.circle('chipx', 'chipy', source=source,
+                   size=size)
+
+        ax2.circle('year', 'chipx', source=source,
+                   size=size)
+
+        ax3.circle('year', 'chipy', source=source,
+                   size=size)
+
+        # Put the subplots in a gridplot
+        pv = bp.gridplot([[ax2],
+                          [ax3]])
+        p = bp.gridplot([[ax1], pv])
+        bp.save(p)
+
 
 if 'asol' not in globals():
     asol = get_asol(h5_file)
 
+aw = AsolBinnedStats(asol, 7)
 am = AsolBinnedStats(asol, 365.25 / 12)
 a3m = AsolBinnedStats(asol, 365.25 / 4)
 
