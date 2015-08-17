@@ -11,6 +11,7 @@ from astropy.time import Time
 import tables
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 from bokeh.models import ColumnDataSource
 import bokeh.plotting as bp
@@ -20,6 +21,9 @@ import mpld3
 data_root = '.'
 
 h5_file = os.path.join(data_root, 'aimpoint_asol_values.h5')
+POG = {'ACIS-I': (930.2, 1009.6),
+       'ACIS-S': (200.7, 476.9),
+       'year': 2015.0}
 
 
 def get_opt(args=None):
@@ -58,14 +62,22 @@ class AsolBinnedStats(object):
 
         for self.det in ('ACIS-S', 'ACIS-I'):
             chipx, chipy = self.get_chipx_chipy()
-            asol[self.chip_col + 'x'] = chipx
-            asol[self.chip_col + 'y'] = chipy
+            asol[self.chipx_col] = chipx
+            asol[self.chipy_col] = chipy
 
         self.grouped = asol.group_by(ibin)
 
     @property
     def chip_col(self):
         return self.det + '_chip'
+
+    @property
+    def chipx_col(self):
+        return self.det + '_chipx'
+
+    @property
+    def chipy_col(self):
+        return self.det + '_chipy'
 
     @property
     def det_title(self):
@@ -166,8 +178,8 @@ class AsolBinnedStats(object):
             for xy in ('x', 'y'):
                 dat = getattr(self, 'p{}_{}{}'.format(perc, self.chip_col, xy))
                 years.append(dat['year'])
-                chipxs.append(dat[self.chip_col + 'x'])
-                chipys.append(dat[self.chip_col + 'y'])
+                chipxs.append(dat[self.chipx_col])
+                chipys.append(dat[self.chipy_col])
 
         year = np.concatenate(years)
         chipx = np.concatenate(chipxs)
@@ -181,7 +193,24 @@ class AsolBinnedStats(object):
 
         cm = matplotlib.cm.get_cmap('YlOrRd')
 
-        opt = dict(c=year, cmap=cm, alpha=0.8, s=6.0, linewidths=0.5)
+        # Make the 6-month bounding box
+        asol = self.asol
+        iok = np.searchsorted(asol['year'], asol['year'][-1] - 0.5)
+        asol = self.asol[iok:]
+        x0, x1 = np.min(asol[self.chipx_col]), np.max(asol[self.chipx_col])
+        y0, y1 = np.min(asol[self.chipy_col]), np.max(asol[self.chipy_col])
+        dx = x1 - x0
+        dy = y1 - y0
+        ax1.add_patch(Rectangle((x0, y0), dx, dy,
+                                facecolor='#fff8f8', edgecolor='k',
+                                zorder=-100))
+        pogx = POG[self.det][0]
+        pogy = POG[self.det][1]
+        ax1.plot([pogx], [pogy], '*r', ms=15, zorder=100)
+        ax2.plot([POG['year']], [pogx], '*r', ms=15, zorder=100)
+        ax3.plot([POG['year']], [pogy], '*r', ms=15, zorder=100)
+
+        opt = dict(c=year, cmap=cm, alpha=0.8, s=6.0, linewidths=0.5, zorder=10)
         points = ax1.scatter(chipx, chipy, **opt)
         ax1.set_xlabel('CHIPX')
         ax1.set_ylabel('CHIPY')
@@ -213,8 +242,8 @@ class AsolBinnedStats(object):
         TOOLS = 'pan,wheel_zoom,box_zoom,box_select,crosshair,reset'
 
         year = self.mean['year']
-        chipx = self.mean[self.chip_col + 'x']
-        chipy = self.mean[self.chip_col + 'y']
+        chipx = self.mean[self.chipx_col]
+        chipy = self.mean[self.chipy_col]
 
         source = ColumnDataSource(data=dict(year=year, chipx=chipx, chipy=chipy))
 
