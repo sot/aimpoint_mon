@@ -115,7 +115,7 @@ class AsolBinnedStats(object):
             cy0, cyy, cyz = 963.07, +41.74, 0.0
         else:
             cx0, cxy, cxz = 252.25, -41.68, 0.0
-            cy0, cyy, cyz = 963.07, 0.0, -41.68
+            cy0, cyy, cyz = 519.95, 0.0, -41.68
 
         asol = self.asol
         chipx = cx0 + cxy * asol['dy'] + cxz * asol['dz']
