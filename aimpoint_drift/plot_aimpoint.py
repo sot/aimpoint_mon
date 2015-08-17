@@ -13,8 +13,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-from bokeh.models import ColumnDataSource
-import bokeh.plotting as bp
 import mpld3
 
 
@@ -239,6 +237,8 @@ class AsolBinnedStats(object):
         mpld3.save_html(fig, outfile)
 
     def plot_chip_x_y(self):
+        import bokeh.plotting as bp
+        from bokeh.models import ColumnDataSource
         det = self.det
 
         bp.output_file('chip_x_y_{}.html'.format(self.det_title),
