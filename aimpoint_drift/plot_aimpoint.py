@@ -3,7 +3,6 @@
 import re
 import os
 import argparse
-import functools
 from itertools import izip
 
 import numpy as np
@@ -52,12 +51,6 @@ def get_asol(filename):
 
 
 class AsolBinnedStats(object):
-    funcs = {'min': np.min,
-             'max': np.max,
-             'mean': np.mean,
-             'p10': functools.partial(np.percentile, q=10),
-             'p90': functools.partial(np.percentile, q=90)}
-
     def __init__(self, asol, bin_days):
         t_end = asol[-1]['time'] + 10  # Make sure final bin is just about full
         ibin = (asol['time'] - t_end) // (86400. * bin_days)
@@ -78,11 +71,27 @@ class AsolBinnedStats(object):
     def det_title(self):
         return re.sub('-', '', self.det.lower())
 
+    @property
+    def ccd(self):
+        return 'I3' if self.det.lower().endswith('i') else 'S3'
+
+    @property
+    def argsort(self):
+        if not hasattr(self, '_argsort'):
+            self._argsort = self.grouped.groups.aggregate(np.argsort)
+        return self._argsort
+
     def __getattr__(self, attr):
-        if attr in self.funcs:
+        m = re.match(r'p(\d+)_(\S+)', attr)
+        if m:
+            perc, col = m.groups()
             _attr = '_' + attr
             if not hasattr(self, _attr):
-                val = self.grouped.groups.aggregate(self.funcs[attr])
+                rows = []
+                for group, isort in izip(self.grouped.groups, self.argsort[col]):
+                    ii = (int(perc) * (len(group) - 1)) // 100
+                    rows.append(group[isort[ii]])
+                val = Table(rows=rows, names=self.grouped.colnames)
                 setattr(self, _attr, val)
             return getattr(self, _attr)
         else:
@@ -106,7 +115,6 @@ class AsolBinnedStats(object):
         import bokeh.plotting as bp
 
         det = self.det
-        ccd = 'I3' if det.lower().endswith('i') else 'S3'
 
         bp.output_file('chip_year_{}.html'.format(self.det_title),
                        title='{} CHIP vs year'.format(det))
@@ -114,7 +122,7 @@ class AsolBinnedStats(object):
 
         ax1 = bp.figure(tools=TOOLS, toolbar_location='left',
                         plot_width=800, height=300,
-                        title='{} aimpoint position (CCD {})'.format(det, ccd),
+                        title='{} aimpoint position (CCD {})'.format(det, self.ccd),
                         y_axis_label='CHIPX')
         ax2 = bp.figure(tools=TOOLS, width=800, height=300,
                         x_range=ax1.x_range,
@@ -143,7 +151,6 @@ class AsolBinnedStats(object):
 
     def plot_chip_x_y_mpl(self):
         det = self.det
-        ccd = 'I3' if det.lower().endswith('i') else 'S3'
 
         outfile = 'chip_x_y_{}.html'.format(self.det_title)
 
@@ -152,13 +159,19 @@ class AsolBinnedStats(object):
                    for prop in ('mean', 'min', 'max')]
             return np.concatenate(out)
 
-        # year = self.mean['year']
-        # chipx = self.mean[self.chip_col + 'x']
-        # chipy = self.mean[self.chip_col + 'y']
+        years = []
+        chipxs = []
+        chipys = []
+        for perc in (0, 10, 50, 90, 100):
+            for xy in ('x', 'y'):
+                dat = getattr(self, 'p{}_{}{}'.format(perc, self.chip_col, xy))
+                years.append(dat['year'])
+                chipxs.append(dat[self.chip_col + 'x'])
+                chipys.append(dat[self.chip_col + 'y'])
 
-        year = concat('year')
-        chipx = concat(self.chip_col + 'x')
-        chipy = concat(self.chip_col + 'y')
+        year = np.concatenate(years)
+        chipx = np.concatenate(chipxs)
+        chipy = np.concatenate(chipys)
 
         plt.close(1)
         fig = plt.figure(1, figsize=(10, 5))
@@ -168,11 +181,11 @@ class AsolBinnedStats(object):
 
         cm = matplotlib.cm.get_cmap('YlOrRd')
 
-        opt = dict(c=year, cmap=cm, alpha=0.5)
-        points = ax1.scatter(chipx, chipy, **opt)  # points =
+        opt = dict(c=year, cmap=cm, alpha=0.8, s=6.0, linewidths=0.5)
+        points = ax1.scatter(chipx, chipy, **opt)
         ax1.set_xlabel('CHIPX')
         ax1.set_ylabel('CHIPY')
-        ax1.set_title('{} aimpoint position (CCD {})'.format(det, ccd))
+        ax1.set_title('{} aimpoint position (CCD {})'.format(det, self.ccd))
         ax1.set_aspect('equal', 'datalim')
         ax1.grid()
 
@@ -194,7 +207,6 @@ class AsolBinnedStats(object):
 
     def plot_chip_x_y(self):
         det = self.det
-        ccd = 'I3' if det.lower().endswith('i') else 'S3'
 
         bp.output_file('chip_x_y_{}.html'.format(self.det_title),
                        title='CHIP vs year for {}'.format(det))
@@ -212,7 +224,7 @@ class AsolBinnedStats(object):
 
         ax1 = bp.figure(tools=TOOLS, toolbar_location='left',
                         width=width, height=width,
-                        title='{} aimpoint position (CCD {})'.format(det, ccd),
+                        title='{} aimpoint position (CCD {})'.format(det, self.ccd),
                         x_axis_label='CHIPX',
                         y_axis_label='CHIPY')
         ax2 = bp.figure(tools=TOOLS, width=width, height=np.int(width // ratio),
