@@ -55,7 +55,11 @@ def get_asol(filename):
 
 
 class AsolBinnedStats(object):
-    def __init__(self, asol, bin_days):
+    def __init__(self, asol, bin_days, n_years=None):
+        if n_years is not None:
+            iok = np.searchsorted(asol['year'], asol['year'][-1] - n_years)
+            asol = asol[iok:]
+
         t_end = asol[-1]['time'] + 10  # Make sure final bin is just about full
         ibin = (asol['time'] - t_end) // (86400. * bin_days)
         self.asol = asol
@@ -284,6 +288,7 @@ if 'asol' not in globals():
 
 aw = AsolBinnedStats(asol, 7)
 am = AsolBinnedStats(asol, 365.25 / 12)
+am_4 = AsolBinnedStats(asol, 365.25 / 12, n_years=4)
 a3m = AsolBinnedStats(asol, 365.25 / 4)
 
 opt = get_opt(['--data-root=..'])
