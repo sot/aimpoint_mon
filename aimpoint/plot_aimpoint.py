@@ -163,6 +163,18 @@ class AsolBinnedStats(object):
                          [ax2]])
         bp.save(p)
 
+    def plot_intraobs_delta_x_y(self):
+        det = self.det
+        outfile = 'intra_obs_x_y_{}.html'.format(self.det_title)
+        obsids = self.asol.group_by('obsid')
+        mins = obsids.groups.aggregate(np.min)
+        maxes = obsids.groups.aggregate(np.maxes)
+        means = obsids.groups.aggregate(np.mean)
+
+        axes = plt.subplots(nrows=2, ncols=1, sharex=True)
+        for xy, ax in izip(('x', 'y'), axes):
+            pass
+
     def plot_chip_x_y_mpl(self):
         det = self.det
 
