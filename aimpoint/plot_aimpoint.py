@@ -191,7 +191,7 @@ class AsolBinnedStats(object):
         fig = plt.figure(1, figsize=(10, 5))
         ax1 = plt.subplot2grid((2, 4), (0, 0), colspan=2, rowspan=2)
         ax2 = plt.subplot2grid((2, 4), (0, 2), colspan=2)
-        ax3 = plt.subplot2grid((2, 4), (1, 2), colspan=2)
+        ax3 = plt.subplot2grid((2, 4), (1, 2), colspan=2, sharex=ax2)
 
         cm = matplotlib.cm.get_cmap('YlOrRd')
 
