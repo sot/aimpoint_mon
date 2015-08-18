@@ -220,6 +220,9 @@ class AsolBinnedStats(object):
                                 zorder=-100))
         pogx = POG[self.det][0]
         pogy = POG[self.det][1]
+        print('x0, x1, y0, y1 {:.1f} {:.1f} {:.1f} {:.1f}'
+              .format(x0, x1, y0, y1))
+        print('pogx, pogy: {:.1f} {:.1f}'.format(pogx, pogy))
         ax1.plot([pogx], [pogy], '*r', ms=15, zorder=100)
         ax2.plot([POG['year']], [pogx], '*r', ms=15, zorder=100)
         ax3.plot([POG['year']], [pogy], '*r', ms=15, zorder=100)
