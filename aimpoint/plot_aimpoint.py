@@ -8,6 +8,7 @@ from itertools import izip
 import numpy as np
 from astropy.table import Table, Column
 from astropy.time import Time
+from Ska.engarchive import fetch_eng as fetch
 import tables
 import matplotlib
 import matplotlib.pyplot as plt
@@ -163,22 +164,68 @@ class AsolBinnedStats(object):
                          [ax2]])
         bp.save(p)
 
-    def plot_intraobs_delta_x_y(self):
-        det = self.det
-        outfile = 'intra_obs_x_y_{}.html'.format(self.det_title)
-        obsids = self.asol.group_by('obsid')
-        mins = obsids.groups.aggregate(np.min)
-        maxes = obsids.groups.aggregate(np.maxes)
+    def plot_intra_obs_dy_dz(self):
+        # Make a table with the max delta chipx and chipy during each obsid.
+        # First get the mins, maxes, means for each obsid by grouping.
+        obsids = self.asol.group_by('obsid')['obsid', 'year', 'dy', 'dz']
+        mins = obsids.groups.aggregate(np.minimum)
+        maxes = obsids.groups.aggregate(np.maximum)
         means = obsids.groups.aggregate(np.mean)
 
-        axes = plt.subplots(nrows=2, ncols=1, sharex=True)
-        for xy, ax in izip(('x', 'y'), axes):
-            pass
+        t = Table([means['year'],
+                   (maxes['dy'] - mins['dy']) * 20,
+                   (maxes['dz'] - mins['dz']) * 20],
+                  names=('year', 'dy', 'dz'))
+        t['ybin'] = np.trunc((t['year'] - t['year'][-1] - 0.0001) * 4.0)
+
+        # Now group the dx and dy vals in 3-month intervals and find the 50th
+        # and 90th percentile within each time bin.  This again using aggregation,
+        # but this time in a trickier way by returning a Column object as the
+        # aggregation object instead of a single value.
+        t_bin = t.group_by('ybin')
+        i_sorts = t_bin.groups.aggregate(np.argsort)
+        outs = {}
+        for col in ('dy', 'dz'):
+            for perc in (50, 90, -5):
+                rows = []
+                for group, i_sort in izip(t_bin.groups, i_sorts[col]):
+                    if perc < 0:
+                        for row in group[i_sort[perc:]]:
+                            rows.append(row)
+                    else:
+                        ii = (int(perc) * (len(group) - 1)) // 100
+                        rows.append(group[i_sort[ii]])
+                outs[str(perc) + col] = Table(rows=rows, names=t_bin.colnames)
+
+        plt.close(1)
+        fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, num=1)
+        for col, ax in izip(('dy', 'dz'), axes):
+            for perc, color in izip((50, 90, -5), ('b', 'm', 'r')):
+                t = outs[str(perc) + col]
+                if perc < 0:
+                    ax.plot(t['year'], t[col], '.', color=color, markersize=5,
+                            label='Outliers')
+                else:
+                    ax.plot(t['year'], t[col], color=color, label='{}th percentile'.format(perc))
+                    ax.fill_between(t['year'], t[col], color=color, alpha=0.3)
+            ax.grid()
+            ax.set_ylabel(col.upper() + ' (arcsec)')
+
+        ylims = [axes[i].get_ylim()[1] for i in (0, 1)]
+        for ii in (0, 1):
+            axes[ii].set_ylim(0, max(ylims))
+        axes[0].set_title('Intra-observation aimpoint drift (spacecraft coordinates)')
+        axes[0].legend(loc='upper left', fontsize='small', title='')
+        axes[1].set_xlabel('Year')
+
+        mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
+
+        outroot = 'intra_obs_dy_dz'
+        mpld3.save_html(fig, outroot + '.html')
+        plt.savefig(outroot + '.png')
 
     def plot_chip_x_y_mpl(self):
         det = self.det
-
-        outfile = 'chip_x_y_{}.html'.format(self.det_title)
 
         def concat(colname):
             out = [getattr(self, prop)[colname]
@@ -248,8 +295,11 @@ class AsolBinnedStats(object):
 
         plt.show()
         mpld3.plugins.connect(fig, mpld3.plugins.LinkedBrush(points))
+        mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
 
-        mpld3.save_html(fig, outfile)
+        outroot = 'chip_x_y_{}'.format(self.det_title)
+        mpld3.save_html(fig, outroot + '.html')
+        plt.savefig(outroot + '.png')
 
     def plot_chip_x_y(self):
         import bokeh.plotting as bp
@@ -296,6 +346,23 @@ class AsolBinnedStats(object):
                           [ax3]])
         p = bp.gridplot([[ax1], pv])
         bp.save(p)
+
+
+def plot_housing_temperature():
+    dat = fetch.Msid('aach1t', '2000:001', stat='daily')
+    plt.close(1)
+    fig = plt.figure(figsize=(8, 4))
+    year = Time(dat.times, format='cxcsec').decimalyear
+    plt.plot(year, dat.vals)
+    plt.grid()
+    plt.xlabel('Year')
+    plt.ylabel('Temperature (degF)')
+    plt.title('Aspect Camera housing temperature trend')
+
+    outroot = 'aca_housing_temperature'
+    mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
+    mpld3.save_html(fig, outroot + '.html')
+    plt.savefig(outroot + '.png')
 
 
 if 'asol' not in globals():
