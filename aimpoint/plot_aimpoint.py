@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import json
 import re
 import os
 import argparse
@@ -11,18 +12,22 @@ from astropy.time import Time
 from Ska.engarchive import fetch_eng as fetch
 import tables
 import matplotlib
+matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 import mpld3
 
 
-data_root = '.'
+opt = None  # Global options, set in main
+info = {}  # Global data structure to capture relevant information
 
-h5_file = os.path.join(data_root, 'aimpoint_asol_values.h5')
 POG = {'ACIS-I': (930.2, 1009.6),
        'ACIS-S': (200.7, 476.9),
        'year': 2015.0}
+
+acis_arcsec_per_pix = 0.492
 
 
 def get_opt(args=None):
@@ -34,12 +39,13 @@ def get_opt(args=None):
     return parser.parse_args(args)
 
 
-def get_asol(filename):
+def get_asol():
     """
     Get aspect solution DY, DZ, DTHETA values sampled at 1 ksec intervals
     during all science observations.
     """
-    h5 = tables.openFile(filename)
+    h5_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
+    h5 = tables.openFile(h5_file)
     asol = Table(h5.root.data[:])
     h5.close()
 
@@ -50,6 +56,10 @@ def get_asol(filename):
     asol.add_column(year, index=0)
 
     asol.sort('time')
+
+    info['last_ctime'] = Time(asol['time'][-1], format='cxcsec').datetime.ctime()
+    info['last_obsid'] = asol['obsid'][-1]
+
     return asol
 
 
@@ -126,7 +136,7 @@ class AsolBinnedStats(object):
 
         return chipx, chipy
 
-    def plot_chip_year(self):
+    def plot_chip_year_bokeh(self):
         import bokeh.plotting as bp
 
         det = self.det
@@ -220,12 +230,14 @@ class AsolBinnedStats(object):
 
         mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
 
-        outroot = 'intra_obs_dy_dz'
+        outroot = os.path.join(opt.data_root, 'intra_obs_dy_dz')
         mpld3.save_html(fig, outroot + '.html')
-        plt.savefig(outroot + '.png')
+        fig.patch.set_visible(False)
+        plt.savefig(outroot + '.png', frameon=False)
 
-    def plot_chip_x_y_mpl(self):
-        det = self.det
+    def plot_chip_x_y(self, det=None):
+        if det:
+            self.det = det
 
         def concat(colname):
             out = [getattr(self, prop)[colname]
@@ -267,27 +279,46 @@ class AsolBinnedStats(object):
                                 zorder=-100))
         pogx = POG[self.det][0]
         pogy = POG[self.det][1]
-        print('x0, x1, y0, y1 {:.1f} {:.1f} {:.1f} {:.1f}'
-              .format(x0, x1, y0, y1))
-        print('pogx, pogy: {:.1f} {:.1f}'.format(pogx, pogy))
+
+        # Store some information for the web page
+        info_det = info[self.det_title] = {}
+        info_det['pogx'] = pogx
+        info_det['pogy'] = pogy
+        info_det['chipx'] = {}
+        info_det['chipx']['min'] = x0
+        info_det['chipx']['mid'] = xmid = (x0 + x1) / 2
+        info_det['chipx']['max'] = x1
+        info_det['chipy'] = {}
+        info_det['chipy']['min'] = y0
+        info_det['chipy']['mid'] = ymid = (y0 + y1) / 2
+        info_det['chipy']['max'] = y1
+        if det == 'ACIS-S':
+            info_det['dDY'] = -(pogx - xmid) * acis_arcsec_per_pix
+            info_det['dDZ'] = -(pogy - ymid) * acis_arcsec_per_pix
+        else:
+            info_det['dDY'] = (pogy - ymid) * acis_arcsec_per_pix
+            info_det['dDZ'] = -(pogx - xmid) * acis_arcsec_per_pix
+        for dd in ('dDY', 'dDZ'):
+            info_det[dd + '_arcmin'] = info_det[dd] / 60.
+
         ax1.plot([pogx], [pogy], '*r', ms=15, zorder=100)
         ax2.plot([POG['year']], [pogx], '*r', ms=15, zorder=100)
         ax3.plot([POG['year']], [pogy], '*r', ms=15, zorder=100)
 
-        opt = dict(c=year, cmap=cm, alpha=0.8, s=6.0, linewidths=0.5, zorder=10)
-        points = ax1.scatter(chipx, chipy, **opt)
+        plot_opt = dict(c=year, cmap=cm, alpha=0.8, s=6.0, linewidths=0.5, zorder=10)
+        points = ax1.scatter(chipx, chipy, **plot_opt)
         ax1.set_xlabel('CHIPX')
         ax1.set_ylabel('CHIPY')
         ax1.set_title('{} aimpoint position (CCD {})'.format(det, self.ccd))
         ax1.set_aspect('equal', 'datalim')
         ax1.grid()
 
-        ax2.scatter(year, chipx, **opt)  # points =
+        ax2.scatter(year, chipx, **plot_opt)  # points =
         ax2.set_ylabel('CHIPX')
         ax2.yaxis.tick_right()
         ax2.grid()
 
-        ax3.scatter(year, chipy, **opt)  # points =
+        ax3.scatter(year, chipy, **plot_opt)  # points =
         ax3.set_xlabel('Year')
         ax3.set_ylabel('CHIPY')
         ax3.yaxis.tick_right()
@@ -297,11 +328,12 @@ class AsolBinnedStats(object):
         mpld3.plugins.connect(fig, mpld3.plugins.LinkedBrush(points))
         mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
 
-        outroot = 'chip_x_y_{}'.format(self.det_title)
+        outroot = os.path.join(opt.data_root, 'chip_x_y_{}'.format(self.det_title))
         mpld3.save_html(fig, outroot + '.html')
-        plt.savefig(outroot + '.png')
+        fig.patch.set_visible(False)
+        plt.savefig(outroot + '.png', frameon=False)
 
-    def plot_chip_x_y(self):
+    def plot_chip_x_y_bokeh(self):
         import bokeh.plotting as bp
         from bokeh.models import ColumnDataSource
         det = self.det
@@ -359,18 +391,45 @@ def plot_housing_temperature():
     plt.ylabel('Temperature (degF)')
     plt.title('Aspect Camera housing temperature trend')
 
-    outroot = 'aca_housing_temperature'
+    outroot = os.path.join(opt.data_root, 'aca_housing_temperature')
     mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
     mpld3.save_html(fig, outroot + '.html')
-    plt.savefig(outroot + '.png')
+    fig.patch.set_visible(False)
+    plt.savefig(outroot + '.png', frameon=False)
 
 
-if 'asol' not in globals():
-    asol = get_asol(h5_file)
+def make_pure_python(obj):
+    """
+    Take dict object which can include either dict or numpy scalars or Python scalars, and
+    convert to pure Python.
+    """
+    if isinstance(obj, dict):
+        for key, val in obj.items():
+            obj[key] = make_pure_python(val)
+        return obj
+    elif hasattr(obj, 'item'):
+        return obj.item()
+    else:
+        return obj
 
-aw = AsolBinnedStats(asol, 7)
-am = AsolBinnedStats(asol, 365.25 / 12)
-am_4 = AsolBinnedStats(asol, 365.25 / 12, n_years=4)
-a3m = AsolBinnedStats(asol, 365.25 / 4)
 
-opt = get_opt(['--data-root=..'])
+def main():
+    global opt
+    opt = get_opt()
+
+    asol_aimpoint = get_asol()
+
+    asol_monthly = AsolBinnedStats(asol_aimpoint, 365.25 / 12)
+    asol_monthly.plot_chip_x_y(det='ACIS-S')
+    asol_monthly.plot_chip_x_y(det='ACIS-I')
+    asol_monthly.plot_intra_obs_dy_dz()
+
+    plot_housing_temperature()
+
+    info_file = os.path.join(opt.data_root, 'info.json')
+    with open(info_file, 'w') as fh:
+        json.dump(make_pure_python(info), fh, indent=4, sort_keys=True)
+
+
+if __name__ == '__main__':
+    main()

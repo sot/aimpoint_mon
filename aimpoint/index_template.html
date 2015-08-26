@@ -1,0 +1,287 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <head>
+    <title>Aimpoint Trending</title>
+    <link href="/mta/ASPECT/aspect.css" rel="stylesheet" type="text/css" media="all" />
+  </head>
+
+  <body>
+
+<!--#include virtual="/mta/ASPECT/header.html"-->
+
+
+<h2> Chandra Aimpoint Trending {%if static%}(static version){%endif%}</h2>
+
+<p>The observation aimpoint is defined as the position on the focal plane where an on-axis
+target is located, assuming that the SIM offset is zero and both Y Offset and Z Offset
+(aimpoint offset) are zero.  Over the course of the mission the mean aimpoint has drifted
+over 30 arcsec, due primarily due to the steadily increasing temperature of the Aspect
+Camera Assembly (ACA).  See the <a href="#details">Details</a>
+and <a href="#references">References</a> sections for further information.
+
+<p>In addition to a mean drift there has been a steady increase in the scatter on time
+scales of days.  This term is directly related to the absolute pointing
+accuracy which describes the positional accuracy with which a target can be placed on the
+detector.  Starting around 2015 the amplitude of this scatter has been large enough to
+potentially impact "pointing-sensitive" observations in which an absolute pointing error
+might affect science or instrument safety.  This includes ACIS windowed or subarray
+observations, or grating observations of unusually bright sources that must be kept just
+off the detector.
+
+<p> The mean aimpoint drift adds to pointing uncertainty by introducing a discrepancy
+between the <em>predicted</em> median aimpoint (used in the planning process) and the
+actual median aimpoint around the time of observation.  Currently the predicted aimpoint for
+each detector is updated once per year, typically in late November prior to issuing an
+update to the
+<a href="http://cxc.harvard.edu/proposer/POG/html/">Proposers' Observatory Guide</a> for
+the subsequent Call for Proposals.  Once the yearly update is made aimpoint is assumed to
+be static (for planning purposes) until the next update.  As of 2015 this approximation is
+not adequate for pointing-sensitive observations.
+
+<h3> Webpage contents and usage </h3>
+
+<p> This webpage serves as a reference for both the long-term and current trend in the
+Chandra aimpoint.  It is updated daily and gives the effective bounding box of observed
+aimpoint positions in chip coordinates over the last 6 months.  At this time only ACIS-S
+and ACIS-I are included because there have been no pointing-sensitive observations on HRC
+to date.
+
+<p>  Many users with pointing-sensitive observations will only need to reference the
+6-month aimpoint bounds and median and compare with the latest predicted aimpoint values.
+This will provide guidance for adjusting the target offset with assistance from your USINT
+contact.
+
+<h4> Going deeper </h4>
+
+{% if static %}
+<p>You are viewing the static version of the aimpoint trending page which includes static
+PNG figures.  If you would like to dig a little deeper and understand how this issue
+has evolved then return to the <a href="index.html">dynamic version</a>.
+{% else %}
+<p> To dig a little deeper and understand how this issue has evolved, <strong>the plots in this
+  page are live plots</strong>, powered by the
+  Python <a href="http://mpld3.github.io/">mpld3</a> package and ultimately by the
+  Javascript <a href="http://d3js.org/">D3</a> plotting engine.  The most insight can be
+  gained by using the linked brush feature which allows selecting points in one
+  panel and seeing the same points highlighted in the other panels.
+
+<p> To do this, left-click in the lower-right panel (CHIPY vs. Year) and drag the mouse up
+  and right to select a box that covers the full CHIPY range and about two years of data.
+  (You might need to click once in the plot first to get a + cursor).  Once you have a
+  gray selection box, carefully move your mouse into the box so that it turns into the
+  normal Move icon (four arrows pointing outward).  Now click and drag the box all the way
+  to the left and then slowly pan it rightward to mimic the progression of time.  Now you
+  will see a virtual movie of how the aimpoint has been dynamically changing.
+
+<p> <em> NOTES: </em>
+<ul>
+  <li> It may take a few seconds for the plots to initially load.  If they do not load in
+  time then there is a <a href="index_static.html">static version</a> of the page
+  available.  [Static version to be completed].</li>
+  <li> Chrome is far more responsive than Firefox.  Any feedback on how this page works on
+    Internet Explorer or other browsers would be appreciated. </li>
+</ul>
+
+<p>If the dynamic plots on this page are too slow or not to your liking then please visit the
+<a href="index_static.html">static version</a>.
+{% endif %}
+
+<h3 id="aimpoint-trending"> Aimpoint trending (current through obsid={{last_obsid}} on {{last_ctime}})</h3>
+
+The plots below show a representative sampling of aimpoint positions during Chandra
+science observations.  This includes points corresponding to the minimum, 10th percentile,
+median, 90th percentile, and maximum during one-month bins.  This sampling is complete
+with regard to outliers and does not distinguish between individual observations.  See the
+<a href="#details">Details</a> section for a full description of this process and links to
+the actual code.
+
+In each plot there is a box which highlights the maximum range of aimpoint CHIPX and CHIPY
+within the last 6 months.  In addition there is a red star which shows the current
+aimpoint used for planning.
+
+<h4 id="acis-s"> ACIS-S</h4>
+
+A key point to highlight for ACIS-S is that the planning aimpoint is at the extreme corner of
+the observed aimpoint extent.  This means that the aimpoints for some observations in the
+last 6 months have been offset by nearly 40 pixels in CHIPX and over 20 pixels in CHIPY.
+Another important point is that there is a strong correlation between CHIPX and CHIPY
+which is most apparent when viewing the data dynamically using the linked brush, but is
+also visible noting that the darkest red points are all from the last year of observations.
+
+<p>The 6-month bounding box and the 2015.0 planning aimpoint from the POG (red star) are:<br/><br/>
+
+<tt>
+<table class="white-double-lines">
+<tr><th></th> <th>Min</th> <th>Midpoint</th> <th>Max</th> <th>POG</th></tr>
+<tr><th>CHIPX</th>
+  <td>{{aciss.chipx.min|round(1)}}</td>
+  <td>{{aciss.chipx.mid|round(1)}}</td>
+  <td>{{aciss.chipx.max|round(1)}}</td>
+  <td>{{aciss.pogx|round(1)}}</td>
+</tr>
+<tr><th>CHIPY</th>
+  <td>{{aciss.chipy.min|round(1)}}</td>
+  <td>{{aciss.chipy.mid|round(1)}}</td>
+  <td>{{aciss.chipy.max|round(1)}}</td>
+  <td>{{aciss.pogy|round(1)}}</td>
+</tr>
+</table>
+</tt>
+
+<p>To account for the difference between the current POG value and the current
+aimpoint, <strong> ADD</strong> the following values to the existing observation target
+offsets DY and DZ:<br/><br/>
+<tt>
+<table>
+  <tr><th>DY:</th> <td>{{aciss.dDY|round(1)}} arcsec = {{aciss.dDY_arcmin|round(3)}} arcmin</td></tr>
+  <tr><th>DZ:</th> <td>{{aciss.dDZ|round(1)}} arcsec = {{aciss.dDZ_arcmin|round(3)}} arcmin</td></tr>
+</table>
+</tt>
+
+{% if static %}
+<img src="chip_x_y_aciss.png">
+{% else %}
+<!--#include virtual="chip_x_y_aciss.html"-->
+{% endif %}
+
+<h4 id="acis-i"> ACIS-I</h4>
+
+Although not as extreme as ACIS-S, the planning aimpoint for ACIS-I is offset by about
+20 pixels from the center of the 6-month box.
+
+<p>The 6-month bounding box and the 2015.0 planning aimpoint from the POG (red star) are:<br/><br/>
+
+<tt>
+<table class="white-double-lines">
+<tr><th></th> <th>Min</th> <th>Midpoint</th> <th>Max</th> <th>POG</th></tr>
+<tr><th>CHIPX</th>
+  <td>{{acisi.chipx.min|round(1)}}</td>
+  <td>{{acisi.chipx.mid|round(1)}}</td>
+  <td>{{acisi.chipx.max|round(1)}}</td>
+  <td>{{acisi.pogx|round(1)}}</td>
+</tr>
+<tr><th>CHIPY</th>
+  <td>{{acisi.chipy.min|round(1)}}</td>
+  <td>{{acisi.chipy.mid|round(1)}}</td>
+  <td>{{acisi.chipy.max|round(1)}}</td>
+  <td>{{acisi.pogy|round(1)}}</td>
+</tr>
+</table>
+</tt>
+
+<p>To account for the difference between the current POG value and the current
+aimpoint, <strong> ADD</strong> the following values to the existing observation target
+offsets DY and DZ:<br/><br/>
+<tt>
+<table>
+  <tr><th>DY:</th> <td>{{acisi.dDY|round(1)}} arcsec = {{acisi.dDY_arcmin|round(3)}} arcmin</td></tr>
+  <tr><th>DZ:</th> <td>{{acisi.dDZ|round(1)}} arcsec = {{acisi.dDZ_arcmin|round(3)}} arcmin</td></tr>
+</table>
+</tt>
+
+
+{% if static %}
+<img src="chip_x_y_acisi.png">
+{% else %}
+<!--#include virtual="chip_x_y_acisi.html"-->
+{% endif %}
+
+<h3> Intra-observation aimpoint drift </h3>
+
+During an observation the aimpoint can drift, and this is illustrated in the plot below.
+However, from the perspective of planning observations this need not be
+considered because it is <em>already included</em> in the <a href="#aimpoint-trending">Aimpoint
+  Trending</a> plots.  This is because those plots sample from 1 ksec intervals within
+every science observation (instead of per-observation means), thus picking up the extremes.
+
+
+{% if static %}
+<img src="intra_obs_dy_dz.png">
+{% else %}
+<!--#include virtual="intra_obs_dy_dz.html"-->
+{% endif %}
+
+<h3 id="details"> Details</h3>
+
+<h4> Background </h4>
+
+<p>The relationship at the foundation of this work is the one-to-one correspondence
+between the aspect solution SIM offset values <tt>(DY, DZ)</tt> and the aimpoint offset.
+Those values are derived primarily by tracking positions of the fiducial lights which are
+located in the instrument focal plane and are imaged in the ACA by means of the Fiducial
+Transfer System optics.  The one-to-one correspondence relies on our understanding that
+the alignment of the HRMA optical axis relative to the science instruments is relatively
+stable (<a href="http://cxc.harvard.edu/cal/Hrma/OpticalAxisAndAimpoint.html">HRMA Optical
+Axis and Telescope Aimpoint</a>). This implies that any apparent drift in the fid
+positions is due to change in the ACA to HRMA alignment, and not distortion of the Optical
+Bench Assembly.  Prior to launch it had been surmised that the latter term would dominate.
+
+<p>The ACA is used by the on-board Pointing Control and Attitude Determination system to
+maintain pointing.  If the ACA alignment is shifting with respect to the HRMA - SIM
+system, then an aimpoint shift is observed.  Effectively the ACA points precisely at the
+target but the rest of the spacecraft hangs off the ACA and wanders somewhat in alignment.
+
+<p>The trend of ACA housing temperature is shown below, and one easily sees the qualitative similarity
+with the aimpoint trending data.<br/>
+
+
+{% if static %}
+<img src="aca_housing_temperature.png">
+{% else %}
+<!--#include virtual="aca_housing_temperature.html"-->
+{% endif %}
+
+<h4> Processing </h4>
+
+<p>Aspect level-1 processing of each science observations produces an aspect solution file
+that is sampled each 0.25625 seconds and contains the <tt>(DY, DZ)</tt> values
+corresponding to the ACA alignment shift.  The minimum time scale for significant shifts
+is about 10 ksec, so our ingest code takes a sample every 1.0 ksec, with a minimum of 2
+samples for each observation.  This was done for all observations since 2000:001 and the
+data stored in a single HDF5 file.  A daily cron job adds new aspect solution data as they
+become available.
+
+<p>Converting from <tt>(DY, DZ)</tt> to <tt>(CHIPX, CHIPY)</tt> is a simple linear
+transformation if only ~arcsec accuracy is required.  In this case that is sufficient.
+Deriving and validating this tranformation is not entirely trivial, and is documented
+in this IPython notebook
+on <a href="https://github.com/sot/fid_drift_mon/blob/aimpoint/aimpoint/absolute_pointing_uncertainty.ipynb">
+Absolute Pointing Uncertainty</a>.  (This notebook is currently rough and poorly
+  documented, but I plan to address this.)
+
+<p>The step of generating presentation plots to visualize and understand the data takes
+  some care.  In order to see the expanding extent with TIME while also getting a sense of
+  the CHIPX - CHIPY correlation, we need to visualize all three axes.  A 3-d plot might
+  work, but static 2-d representations of 3-d data can be unsatisfying.  Instead the
+  strategy is to use <a href="https://en.wikipedia.org/wiki/Brushing_and_linking">linking
+  and brushing</a> and a Javascript-powered live plot in the web page.  In order to do
+  this and have manageable page load times, we need to sample the data while capturing
+  behavior of the extrema which matter here.
+
+<p>The approach taken is to bin the data in one month intervals.  Within each bin find the
+  row that contains the minimum, 10th percentile, 50th percentile (median), 90th
+  percentile, and maximum of CHIPX.  For each of those rows sample CHIPX and CHIPY.
+  Now repeat that process for the rows containing percentile values of CHIPY.  This
+  gives 10 CHIPX, CHIPY pairs for each month.  This fills out the sampling reasonably well.
+
+
+<h4> Analysis code</h4> The scripts used in this analysis are in available on
+GitHub in
+the <a href="https://github.com/sot/fid_drift_mon/tree/aimpoint/aimpoint">fid_drift_mon</a>
+repository.
+
+
+<h3 id="references"> References</h3>
+
+<ul>
+<li> <a href="http://cxc.harvard.edu/proposer/POG/html/chap4.html#tth_sEc4.5">POG Section 4.5</a> </li>
+<li> <a href="http://cxc.harvard.edu/cal/Hrma/OpticalAxisAndAimpoint.html">HRMA Optical Axis and Telescope Aimpoint</a></li>
+<li> <a href="http://cxc.harvard.edu/cal/Hrma/rsrc/Publish/Optics/OpticalAxisAndAimpoint/oxap_memo_2014.pdf">
+Chandra Optical Axis, Aimpoint and Their Drifts (P. Zhao)</a></li>
+</ul>
+
+<!--#include virtual="/mta/ASPECT/footer.html"-->
+<!--footer end-->
+
+  </body>
+</html>
