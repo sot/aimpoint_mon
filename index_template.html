@@ -95,9 +95,12 @@ with regard to outliers and does not distinguish between individual observations
 <a href="#details">Details</a> section for a full description of this process and links to
 the actual code.
 
-In each plot there is a box which highlights the maximum range of aimpoint CHIPX and CHIPY
+<p>In each plot there is a box which highlights the maximum range of aimpoint CHIPX and CHIPY
 within the last 6 months.  In addition there is a red star which shows the current
 aimpoint used for planning.
+
+<p>The numerical table values shown in this page are available in machine-readable JSON
+  format as <a href="info.json">info.json</a>.
 
 <h4 id="acis-s"> ACIS-S</h4>
 
@@ -250,7 +253,7 @@ become available.
 transformation if only ~arcsec accuracy is required.  In this case that is sufficient.
 Deriving and validating this tranformation is not entirely trivial, and is documented
 in this IPython notebook
-on <a href="https://github.com/sot/fid_drift_mon/blob/aimpoint/aimpoint/absolute_pointing_uncertainty.ipynb">
+on <a href="https://github.com/sot/aimpoint_mon/blob/master/absolute_pointing_uncertainty.ipynb">
 Absolute Pointing Uncertainty</a>.  (This notebook is currently rough and poorly
   documented, but I plan to address this.)  The resultant transformations are:
 <pre>
@@ -286,8 +289,7 @@ Absolute Pointing Uncertainty</a>.  (This notebook is currently rough and poorly
 
 <h4> Analysis code</h4> The scripts used in this analysis are in available on
 GitHub in
-the <a href="https://github.com/sot/fid_drift_mon/tree/aimpoint/aimpoint">fid_drift_mon</a>
-repository.
+the <a href="https://github.com/sot/aimpoint_mon">aimpoint_mon</a> repository.
 
 
 <h3 id="references"> References</h3>
