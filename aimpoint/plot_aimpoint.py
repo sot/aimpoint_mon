@@ -25,7 +25,7 @@ info = {}  # Global data structure to capture relevant information
 
 POG = {'ACIS-I': (930.2, 1009.6),
        'ACIS-S': (200.7, 476.9),
-       'year': 2015.0}
+       'year': 2015.4}
 
 acis_arcsec_per_pix = 0.492
 
