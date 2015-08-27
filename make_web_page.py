@@ -6,6 +6,7 @@ import json
 
 from jinja2 import Template
 import tables
+import pyyaks.logger
 
 
 def get_opt():
@@ -19,6 +20,10 @@ def get_opt():
 # Options
 opt = get_opt()
 
+# Set up logging
+loglevel = pyyaks.logger.INFO
+logger = pyyaks.logger.get_logger(name='make_web_page', level=loglevel,
+                                  format="%(asctime)s %(message)s")
 # Files
 asol_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
 index_template_file = os.path.join(opt.data_root, 'index_template.html')
@@ -27,6 +32,7 @@ index_files = {False: os.path.join(opt.data_root, 'index.html'),
 info_file = os.path.join(opt.data_root, 'info.json')
 
 # Jinja template context
+logger.info('Loading info file {}'.format(info_file))
 context = json.load(open(info_file, 'r'))
 
 # Get the last record of asol aimpoint values
@@ -40,5 +46,6 @@ for static in (True, False):
     context['static'] = static
     html = template.render(**context)
     index_file = index_files[static]
+    logger.info('Writing index file {}'.format(index_file))
     with open(index_file, 'w') as fh:
         fh.write(html)
