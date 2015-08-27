@@ -64,8 +64,8 @@ def add_asol_to_h5(filename, asol):
 
 
 # Set up logging
-loglevel = pyyaks.logger.VERBOSE
-logger = pyyaks.logger.get_logger(name='get_asol_aimpoint', level=loglevel,
+loglevel = pyyaks.logger.INFO
+logger = pyyaks.logger.get_logger(name='update_aimpoint_data', level=loglevel,
                                   format="%(asctime)s %(message)s")
 
 # Get options
