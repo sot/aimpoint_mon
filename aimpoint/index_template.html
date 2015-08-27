@@ -132,9 +132,9 @@ also visible noting that the darkest red points are all from the last year of ob
 aimpoint, <strong> ADD</strong> the following values to the existing observation target
 offsets DY and DZ:<br/><br/>
 <tt>
-<table>
-  <tr><th>DY:</th> <td>{{aciss.dDY|round(1)}} arcsec = {{aciss.dDY_arcmin|round(3)}} arcmin</td></tr>
-  <tr><th>DZ:</th> <td>{{aciss.dDZ|round(1)}} arcsec = {{aciss.dDZ_arcmin|round(3)}} arcmin</td></tr>
+<table class="white-double-lines">
+  <tr><th>DY</th> <td>{{"%+.1f"|format(aciss.dDY)}} arcsec</td><td>{{"%+.3f"|format(aciss.dDY_arcmin)}} arcmin</td></tr>
+  <tr><th>DZ</th> <td>{{"%+.1f"|format(aciss.dDZ)}} arcsec</td><td>{{"%+.3f"|format(aciss.dDZ_arcmin)}} arcmin</td></tr>
 </table>
 </tt>
 
@@ -173,9 +173,9 @@ Although not as extreme as ACIS-S, the planning aimpoint for ACIS-I is offset by
 aimpoint, <strong> ADD</strong> the following values to the existing observation target
 offsets DY and DZ:<br/><br/>
 <tt>
-<table>
-  <tr><th>DY:</th> <td>{{acisi.dDY|round(1)}} arcsec = {{acisi.dDY_arcmin|round(3)}} arcmin</td></tr>
-  <tr><th>DZ:</th> <td>{{acisi.dDZ|round(1)}} arcsec = {{acisi.dDZ_arcmin|round(3)}} arcmin</td></tr>
+<table class="white-double-lines">
+  <tr><th>DY</th> <td>{{"%+.1f"|format(acisi.dDY)}} arcsec</td><td>{{"%+.3f"|format(acisi.dDY_arcmin)}} arcmin</td></tr>
+  <tr><th>DZ</th> <td>{{"%+.1f"|format(acisi.dDZ)}} arcsec</td><td>{{"%+.3f"|format(acisi.dDZ_arcmin)}} arcmin</td></tr>
 </table>
 </tt>
 
@@ -247,7 +247,21 @@ Deriving and validating this tranformation is not entirely trivial, and is docum
 in this IPython notebook
 on <a href="https://github.com/sot/fid_drift_mon/blob/aimpoint/aimpoint/absolute_pointing_uncertainty.ipynb">
 Absolute Pointing Uncertainty</a>.  (This notebook is currently rough and poorly
-  documented, but I plan to address this.)
+  documented, but I plan to address this.)  The resultant transformations are:
+<pre>
+<table class="white-double-lines">
+  <tr><th>ACIS-S</th> <th>ACIS-I</th></tr>
+  <td>
+    CHIPX = 252.25 + 41.69 * DY<br/>
+    CHIPY = 519.95 + 41.67 * DZ
+  </td>
+  <td>
+    CHIPX = 971.91 + 41.74 * DZ<br/>
+    CHIPY = 963.07 - 41.74 * DY
+  </td>
+</tr>
+</table>
+</pre>
 
 <p>The step of generating presentation plots to visualize and understand the data takes
   some care.  In order to see the expanding extent with TIME while also getting a sense of
