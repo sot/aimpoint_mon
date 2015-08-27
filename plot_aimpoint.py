@@ -11,6 +11,7 @@ from astropy.table import Table, Column
 from astropy.time import Time
 from Ska.engarchive import fetch_eng as fetch
 import tables
+import pyyaks.logger
 import matplotlib
 matplotlib.use('Agg')
 
@@ -19,6 +20,10 @@ from matplotlib.patches import Rectangle
 
 import mpld3
 
+# Set up logging
+loglevel = pyyaks.logger.INFO
+logger = pyyaks.logger.get_logger(name='plot_aimpoint', level=loglevel,
+                                  format="%(asctime)s %(message)s")
 
 opt = None  # Global options, set in main
 info = {}  # Global data structure to capture relevant information
@@ -45,6 +50,7 @@ def get_asol():
     during all science observations.
     """
     h5_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
+    logger.info('Reading asol file {}'.format(h5_file))
     h5 = tables.openFile(h5_file)
     asol = Table(h5.root.data[:])
     h5.close()
@@ -231,6 +237,7 @@ class AsolBinnedStats(object):
         mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
 
         outroot = os.path.join(opt.data_root, 'intra_obs_dy_dz')
+        logger.info('Writing plot files {}.png,html'.format(outroot))
         mpld3.save_html(fig, outroot + '.html')
         fig.patch.set_visible(False)
         plt.savefig(outroot + '.png', frameon=False)
@@ -329,6 +336,7 @@ class AsolBinnedStats(object):
         mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
 
         outroot = os.path.join(opt.data_root, 'chip_x_y_{}'.format(self.det_title))
+        logger.info('Writing plot files {}.png,html'.format(outroot))
         mpld3.save_html(fig, outroot + '.html')
         fig.patch.set_visible(False)
         plt.savefig(outroot + '.png', frameon=False)
@@ -392,6 +400,7 @@ def plot_housing_temperature():
     plt.title('Aspect Camera housing temperature trend')
 
     outroot = os.path.join(opt.data_root, 'aca_housing_temperature')
+    logger.info('Writing plot files {}.png,html'.format(outroot))
     mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
     mpld3.save_html(fig, outroot + '.html')
     fig.patch.set_visible(False)
@@ -428,6 +437,7 @@ def main():
 
     info_file = os.path.join(opt.data_root, 'info.json')
     with open(info_file, 'w') as fh:
+        logger.info('Writing info file {}'.format(info_file))
         json.dump(make_pure_python(info), fh, indent=4, sort_keys=True)
 
 
