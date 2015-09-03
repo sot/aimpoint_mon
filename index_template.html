@@ -253,17 +253,20 @@ Deriving and validating this tranformation is not entirely trivial, and is docum
 in this IPython notebook
 on <a href="https://github.com/sot/aimpoint_mon/blob/master/absolute_pointing_uncertainty.ipynb">
 Absolute Pointing Uncertainty</a>.  (This notebook is currently rough and poorly
-  documented, but I plan to address this.)  The resultant transformations are:
+  documented, but I plan to address this.)  The resultant transformations from
+aspect solution DY and DZ to CHIPX and CHIPY are shown
+below.  Note that in the IPython notebook the DY and DZ values refer to the dmcoords inputs
+which have the sign <em>reversed</em> from the ASOL values.
 <pre>
 <table class="white-double-lines">
   <tr><th>ACIS-S</th> <th>ACIS-I</th></tr>
   <td>
-    CHIPX = 252.25 + 41.69 * DY<br/>
-    CHIPY = 519.95 + 41.67 * DZ
+    CHIPX = 252.25 - 41.69 * DY<br/>
+    CHIPY = 519.95 - 41.67 * DZ
   </td>
   <td>
-    CHIPX = 971.91 + 41.74 * DZ<br/>
-    CHIPY = 963.07 - 41.74 * DY
+    CHIPX = 971.91 - 41.74 * DZ<br/>
+    CHIPY = 963.07 + 41.74 * DY
   </td>
 </tr>
 </table>
