@@ -16,6 +16,8 @@ ODB_SI_ALIGN = np.array([[1.0, 3.3742E-4, 2.7344E-4],
 
 ODB_SI_ALIGN = Quat(Quat(ODB_SI_ALIGN).q).transform
 
+ARCSEC2RAD = np.pi / (3600 * 180)
+
 
 def test_si_align_with_data():
     """
@@ -79,6 +81,13 @@ def test_si_align_with_data():
     assert np.allclose(dy_nom_align, dy_offset, atol=3e-6)  # 0.01 arcsec
     assert np.allclose(dz_nom_align, dz_offset, atol=3e-6)
 
+    # Test calc_pcad_from_targ() for baseline SI_ALIGN
+    q_pcad_calc = calc_pcad_from_targ(ra_targ, dec_targ, q_pcad.roll, dy_offset, dz_offset)
+    dq = q_pcad.inv() * q_pcad_calc
+    assert np.allclose(dq.q[0] * 2, 0, atol=36 * ARCSEC2RAD)
+    assert np.allclose(dq.q[1] * 2, 0, atol=0.01 * ARCSEC2RAD)
+    assert np.allclose(dq.q[2] * 2, 0, atol=0.01 * ARCSEC2RAD)
+
     # Compute PCAD attitude using a new SI ALIGN values based on OR-list TARGET_OFFSET
     # values and with no target offset applied.  This must match the as-planned
     # attitude using the baseline ODB_SI_ALIGN and WITH a target offset applied.
@@ -88,11 +97,11 @@ def test_si_align_with_data():
     dy_align, dz_align = calc_offsets(ra_targ, dec_targ, *q_pcad_align.equatorial)
     dq = q_pcad.inv() * q_pcad_align
 
-    # Check delta quaternion (error) is less than 5e-6 deg (0.02 arcsec)
-    # in pitch and yaw, 0.01 deg in roll.
-    assert np.allclose(np.degrees(dq.q[0] * 2), 0, atol=0.01)
-    assert np.allclose(np.degrees(dq.q[1] * 2), 0, atol=5e-6)
-    assert np.allclose(np.degrees(dq.q[2] * 2), 0, atol=5e-6)
+    # Check delta quaternion (error) is less than 0.01 arcsec
+    # in pitch and yaw, 36 arcsec in roll.
+    assert np.allclose(dq.q[0] * 2, 0, atol=36 * ARCSEC2RAD)
+    assert np.allclose(dq.q[1] * 2, 0, atol=0.01 * ARCSEC2RAD)
+    assert np.allclose(dq.q[2] * 2, 0, atol=0.01 * ARCSEC2RAD)
 
     # Check offsets match to better than 0.01 arcsec
     assert np.allclose(dy_align, dy_offset, atol=3e-6)
@@ -186,3 +195,25 @@ def calc_offsets(ra_targ, dec_targ, ra_pcad, dec_pcad, roll_pcad):
     y_off, z_off = radec2yz(ra_targ, dec_targ, q_hrma)
 
     return y_off, z_off
+
+
+def calc_pcad_from_targ(ra_targ, dec_targ, roll_targ, y_off, z_off, si_align=ODB_SI_ALIGN):
+    """
+    Calculates required Y and Z offsets (deg) required from a target to
+    arrive at the desired PCAD pointing.
+
+    :param ra_targ: RA of science target from OR/Obscat
+    :param dec_targ: Dec of science target from OR/Obscat
+    :param roll_targ: Roll of science target attitude
+    :param y_off: Y offset (deg, sign per OR-list convention)
+    :param z_off: Z offset (deg,sign per OR-list convention)
+    :param si_align: SI ALIGN matrix (default=ODB_SI_ALIGN)
+
+    :rtype: q_pcad (Quat)
+    """
+    q_si_align = Quat(si_align)
+    q_targ = Quat([ra_targ, dec_targ, roll_targ])
+    q_off = Quat([-y_off, -z_off, 0])
+    q_pcad = q_targ * q_off * q_si_align
+
+    return q_pcad
