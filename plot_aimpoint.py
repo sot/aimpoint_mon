@@ -26,7 +26,6 @@ logger = pyyaks.logger.get_logger(name='plot_aimpoint', level=loglevel,
                                   format="%(asctime)s %(message)s")
 
 opt = None  # Global options, set in main
-info = {}  # Global data structure to capture relevant information
 
 POG = {'ACIS-I': (930.2, 1009.6),
        'ACIS-S': (200.7, 476.9),
@@ -44,10 +43,13 @@ def get_opt(args=None):
     return parser.parse_args(args)
 
 
-def get_asol():
+def get_asol(info=None):
     """
     Get aspect solution DY, DZ, DTHETA values sampled at 1 ksec intervals
     during all science observations.
+
+    :param info: dict of processing information and outputs
+    :returns: aspect solution data (Table)
     """
     h5_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
     logger.info('Reading asol file {}'.format(h5_file))
@@ -63,8 +65,9 @@ def get_asol():
 
     asol.sort('time')
 
-    info['last_ctime'] = Time(asol['time'][-1], format='cxcsec').datetime.ctime()
-    info['last_obsid'] = asol['obsid'][-1]
+    if info is not None:
+        info['last_ctime'] = Time(asol['time'][-1], format='cxcsec').datetime.ctime()
+        info['last_obsid'] = asol['obsid'][-1]
 
     return asol
 
@@ -242,7 +245,7 @@ class AsolBinnedStats(object):
         fig.patch.set_visible(False)
         plt.savefig(outroot + '.png', frameon=False)
 
-    def plot_chip_x_y(self, det=None):
+    def plot_chip_x_y(self, det=None, info=None):
         if det:
             self.det = det
 
@@ -288,25 +291,26 @@ class AsolBinnedStats(object):
         pogy = POG[self.det][1]
 
         # Store some information for the web page
-        info_det = info[self.det_title] = {}
-        info_det['pogx'] = pogx
-        info_det['pogy'] = pogy
-        info_det['chipx'] = {}
-        info_det['chipx']['min'] = x0
-        info_det['chipx']['mid'] = xmid = (x0 + x1) / 2
-        info_det['chipx']['max'] = x1
-        info_det['chipy'] = {}
-        info_det['chipy']['min'] = y0
-        info_det['chipy']['mid'] = ymid = (y0 + y1) / 2
-        info_det['chipy']['max'] = y1
-        if det == 'ACIS-S':
-            info_det['dDY'] = -(pogx - xmid) * acis_arcsec_per_pix
-            info_det['dDZ'] = -(pogy - ymid) * acis_arcsec_per_pix
-        else:
-            info_det['dDY'] = (pogy - ymid) * acis_arcsec_per_pix
-            info_det['dDZ'] = -(pogx - xmid) * acis_arcsec_per_pix
-        for dd in ('dDY', 'dDZ'):
-            info_det[dd + '_arcmin'] = info_det[dd] / 60.
+        if info is not None:
+            info_det = info[self.det_title] = {}
+            info_det['pogx'] = pogx
+            info_det['pogy'] = pogy
+            info_det['chipx'] = {}
+            info_det['chipx']['min'] = x0
+            info_det['chipx']['mid'] = xmid = (x0 + x1) / 2
+            info_det['chipx']['max'] = x1
+            info_det['chipy'] = {}
+            info_det['chipy']['min'] = y0
+            info_det['chipy']['mid'] = ymid = (y0 + y1) / 2
+            info_det['chipy']['max'] = y1
+            if det == 'ACIS-S':
+                info_det['dDY'] = -(pogx - xmid) * acis_arcsec_per_pix
+                info_det['dDZ'] = -(pogy - ymid) * acis_arcsec_per_pix
+            else:
+                info_det['dDY'] = (pogy - ymid) * acis_arcsec_per_pix
+                info_det['dDZ'] = -(pogx - xmid) * acis_arcsec_per_pix
+            for dd in ('dDY', 'dDZ'):
+                info_det[dd + '_arcmin'] = info_det[dd] / 60.
 
         ax1.plot([pogx], [pogy], '*r', ms=15, zorder=100)
         ax2.plot([POG['year']], [pogx], '*r', ms=15, zorder=100)
@@ -425,12 +429,13 @@ def make_pure_python(obj):
 def main():
     global opt
     opt = get_opt()
+    info = {'date': Time.now().iso}
 
-    asol_aimpoint = get_asol()
+    asol_aimpoint = get_asol(info)
 
     asol_monthly = AsolBinnedStats(asol_aimpoint, 365.25 / 12)
-    asol_monthly.plot_chip_x_y(det='ACIS-S')
-    asol_monthly.plot_chip_x_y(det='ACIS-I')
+    asol_monthly.plot_chip_x_y(det='ACIS-S', info=info)
+    asol_monthly.plot_chip_x_y(det='ACIS-I', info=info)
     asol_monthly.plot_intra_obs_dy_dz()
 
     plot_housing_temperature()
