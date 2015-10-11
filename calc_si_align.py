@@ -122,7 +122,7 @@ def calc_si_align(dy_align=0.0, dz_align=0.0, check_consistency=True):
     # Define new SI_ALIGN as a delta quaternion update to existing.
     # The minus signs here were empirically determined to pass tests.
     # This is the only place where signs are chosen without a clear justification.
-    si_align = Quat(ODB_SI_ALIGN) * Quat([-dy_align, -dz_align, 0.0])
+    si_align = Quat([-dy_align, -dz_align, 0.0]) * Quat(ODB_SI_ALIGN)
 
     # Get the 3x3 transform matrix corresponding to the si_align quaternion
     out = si_align.transform
