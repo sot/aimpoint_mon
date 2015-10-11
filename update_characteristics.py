@@ -9,6 +9,7 @@ import re
 import os
 from datetime import datetime
 import argparse
+import json
 
 import numpy as np
 from astropy.time import Time
@@ -61,7 +62,7 @@ def make_updated_characteristics(baseline_file,
 
     :rtype: None
     """
-    now = Time.now()
+    process_time = Time.now()
 
     logger.info('Reading baseline characteristics {}'.format(baseline_file))
     with open(baseline_file, 'r') as fh:
@@ -79,7 +80,7 @@ def make_updated_characteristics(baseline_file,
     si_align_acis_s = calc_si_align(dy_acis_s / 3600., dz_acis_s / 3600.)
 
     comments = ['!Updated via aimpoint_mon/update_characteristics version {}'.format(version),
-                '!Run at {}Z'.format(now.iso[:16]),
+                '!Run at {}Z'.format(process_time.iso[:16]),
                 '!Started with baseline file {}'.format(os.path.basename(baseline_file)),
                 '!ACIS-I offsets DY={:.2f} arcsec, DZ={:.2f} arcsec'.format(dy_acis_i, dz_acis_i),
                 '!ACIS-S offsets DY={:.2f} arcsec, DZ={:.2f} arcsec'.format(dy_acis_s, dz_acis_s)]
@@ -95,11 +96,28 @@ def make_updated_characteristics(baseline_file,
 
         lines[i + start] = out + os.linesep
 
-    filename = 'CHARACTERIS_{}'.format(now.datetime.strftime('%d%b%g').upper())
-    outfile = os.path.join(opt.data_root, 'characteristics', filename)
-    logger.info('Writing updated characteristics {}'.format(outfile))
-    with open(outfile, 'w') as fh:
+    filename = 'CHARACTERIS_{}'.format(process_time.datetime.strftime('%d%b%g').upper())
+    updated_file = os.path.join(opt.data_root, 'characteristics', filename)
+    logger.info('Writing updated characteristics {}'.format(updated_file))
+    with open(updated_file, 'w') as fh:
         fh.writelines(lines)
+
+    # Store processing information in a JSON file
+    info = {'date': process_time.iso,
+            'dy_acis_i': dy_acis_i,
+            'dz_acis_i': dz_acis_i,
+            'dy_acis_s': dy_acis_s,
+            'dz_acis_s': dz_acis_s,
+            'dy_dz_units': 'arcsec',
+            'baseline_file': os.path.basename(baseline_file),
+            'updated_file': os.path.basename(updated_file),
+            'si_align_acis_i': si_align_acis_i.tolist(),
+            'si_align_acis_s': si_align_acis_s.tolist(),
+            'version': version,
+            }
+
+    with open(updated_file + '.json', 'w') as fh:
+        json.dump(info, fh, indent=4, sort_keys=True, separators=(',', ': '))
 
 
 def get_baseline_characteristics_file():
