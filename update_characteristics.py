@@ -11,10 +11,11 @@ from datetime import datetime
 import argparse
 import json
 import copy
+from difflib import HtmlDiff
 
 import numpy as np
 from astropy.time import Time
-from astropy.table import Table
+from astropy.table import Table, Column
 from kadi import occweb
 from kadi.events import scrape
 from bs4 import BeautifulSoup as parse_html
@@ -135,6 +136,29 @@ def make_updated_characteristics(baseline_file,
     return info_table
 
 
+def write_diff_file(updated_file, baseline_file):
+    diff = HtmlDiff()
+
+    updated_file = os.path.join(opt.data_root, 'characteristics', updated_file)
+    baseline_file = os.path.join(opt.data_root, 'characteristics', baseline_file)
+
+    with open(updated_file, 'r') as fh:
+        updated_lines = fh.readlines()
+    with open(baseline_file, 'r') as fh:
+        baseline_lines = fh.readlines()
+
+    diff_str = diff.make_file(baseline_lines, updated_lines,
+                              fromdesc=os.path.basename(baseline_file),
+                              todesc=os.path.basename(updated_file),
+                              context=True,
+                              numlines=5)
+
+    diff_file = updated_file + '_diff.html'
+    logger.info('Writing diff to {}'.format(diff_file))
+    with open(diff_file, 'w') as fh:
+        fh.write(diff_str)
+
+
 def write_index_file(info_table):
     """
     Write a summary index file in tabular format from ``info_table`` dict, e.g.
@@ -162,6 +186,34 @@ def write_index_file(info_table):
     logger.info('Writing index file {}'.format(index_file))
     with open(index_file, 'w') as fh:
         fh.writelines(line + os.linesep for line in index.pformat())
+
+    # Write an HTML index file as a table
+    def self_link(vals):
+        """Turn vals into a list of self-referenced links"""
+        return ['<a href="{0}">{0}</a>'.format(val) for val in vals]
+
+    # Turn table entries into HTML links to same
+    diffs = self_link(x + '_diff.html' for x in index['updated_file'])
+    jsons = self_link(x + '.json' for x in index['updated_file'])
+    updated_files = self_link(index['updated_file'])
+    baseline_files = self_link(index['baseline_file'])
+    index.remove_columns(['updated_file', 'baseline_file'])
+    index.add_columns([Column(updated_files, name='updated_file'),
+                       Column(baseline_files, name='baseline_file'),
+                       Column(jsons, name='JSON_info'),
+                       Column(diffs, name='diff')],
+                      [0, 0, 0, 0])
+
+    index_file = index_file + '.html'
+    logger.info('Writing index.html file {}'.format(index_file))
+    index.write(index_file, format='ascii.html')
+
+    # Hack: undo the HTML escaping that table write does.
+    # TODO: just do the whole thing with jinja template.
+    lines = (re.sub(r'&gt;', '>', line) for line in open(index_file, 'r'))
+    lines = [re.sub(r'&lt;', '<', line) for line in lines]
+    with open(index_file, 'w') as fh:
+        fh.writelines(lines)
 
 
 def get_baseline_characteristics_file():
@@ -223,6 +275,7 @@ def main():
     baseline_file = get_baseline_characteristics_file()
     info = make_updated_characteristics(baseline_file)
     write_index_file(info)
+    write_diff_file(info['updated_file'], info['baseline_file'])
 
 
 if __name__ == '__main__':
