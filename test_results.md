@@ -20,6 +20,8 @@ The following three independent analyses have been done:
 - J. McDowell: used DS tool `dmcoords` to independently confirm the derived relationship
   between *aspect solution* DY, DY and CHIPX, CHIPY.
 
+**Test pass: Yes**
+
 ### Test computation of updated ODB_SI_ALIGN values
 
 **Strategy**: use a real observation with non-trivial and non-identical
@@ -66,8 +68,10 @@ PCAD:  As-planned pointing from starcheck
   Q1,Q2,Q3,Q4: -0.18142595  -0.37811633  -0.89077416  0.17502588
 ```
 
-This test is encoded in the function `test_si_align_with_data` within the
-`calc_si_align` module.  This test passes.
+This test is encoded in the function `test_si_align_with_data()` within the
+`calc_si_align` module.
+
+**Test pass: Yes**
 
 ### Test updated Characteristics file in OFLS
 
@@ -148,3 +152,5 @@ Obsid 17097:  DY= 15.00  DZ=-20.00  droll=  0.01 arcsec   ACIS-S
 Obsid 18683:  DY= -5.00  DZ= 10.00  droll= -0.01 arcsec   ACIS-I
 Obsid P3701:  DY= -0.00  DZ= -0.00  droll=  0.00 arcsec     --
 ```
+
+**Test pass: Yes**
