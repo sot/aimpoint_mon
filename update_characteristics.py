@@ -52,9 +52,30 @@ def get_opt(args=None):
     return parser.parse_args(args)
 
 
-def make_updated_characteristics(baseline_file,
-                                 dy_acis_i=-5, dz_acis_i=10,
-                                 dy_acis_s=15, dz_acis_s=-20):
+def get_aimpoint_offsets():
+    """
+    Get most recent aimpoint offset values
+
+    :returns: tuple of dy_acis_i, dz_acis_i, dy_acis_s, dz_acis_s (arcsec)
+    """
+    info_file = os.path.join(opt.data_root, 'info.json')
+    with open(info_file, 'r') as fh:
+        info = json.load(fh)
+
+    process_time = Time(opt.process_time) if opt.process_time else Time.now()
+    if (process_time - Time(info['date'])).jd > 14:
+        logger.info('WARNING: offsets are more than 2 weeks old, last updated {}'
+                    .format(info['date']))
+
+    offsets = (info['acisi']['dDY'], info['acisi']['dDZ'],
+               info['aciss']['dDY'], info['aciss']['dDZ'])
+    logger.info('Read {} updated {} and found offsets {:.2f}, {:.2f}, {:.2f}, {:.2f}'
+                .format(info_file, info['date'], *offsets))
+
+    return offsets
+
+
+def make_updated_characteristics(baseline_file, offsets=(-5, 10, 15, -20)):
     """
     Make an updated characteristics file, starting from path ``baseline_file``
     and updating ODB_SI_ALIGN based on the supplied DY and DZ offsets for
@@ -64,16 +85,14 @@ def make_updated_characteristics(baseline_file,
     and stored in the characteristics/ directory of opt.data_root.
 
     :param baseline_file: baseline file path
-    :param dy_acis_i: ACIS-I DY offset (arcsec)
-    :param dz_acis_i: ACIS-I DZ offset (arcsec)
-    :param dy_acis_s: ACIS-S DY offset (arcsec)
-    :param dz_acis_s: ACIS-S DZ offset (arcsec)
+    :param offsets: tuple of dy_acis_i, dz_acis_i, dy_acis_s, dz_acis_s (arcsec)
 
-    :rtype: None
+    :returns: info_table
     """
     process_time = Time(opt.process_time) if opt.process_time else Time.now()
 
     # Calculate new SI_ALIGN matrices based on supplied aimpoint offsets
+    dy_acis_i, dz_acis_i, dy_acis_s, dz_acis_s = offsets
     si_align_acis_i = calc_si_align(dy_acis_i / 3600, dz_acis_i / 3600.)
     si_align_acis_s = calc_si_align(dy_acis_s / 3600., dz_acis_s / 3600.)
 
@@ -276,7 +295,8 @@ def main():
     version = open(os.path.join(opt.data_root, 'VERSION'), 'r').read().strip()
 
     baseline_file = get_baseline_characteristics_file()
-    info = make_updated_characteristics(baseline_file)
+    offsets = get_aimpoint_offsets()
+    info = make_updated_characteristics(baseline_file, offsets)
     write_index_file(info)
     write_diff_file(info['updated_file'], info['baseline_file'])
 
