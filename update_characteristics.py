@@ -46,6 +46,9 @@ def get_opt(args=None):
     parser.add_argument("--data-root",
                         default=".",
                         help="Root directory for asol and index files")
+    parser.add_argument("--process-time",
+                        type=str,
+                        help="Specify process time (mostly for testing, default=Now)")
     return parser.parse_args(args)
 
 
@@ -68,7 +71,7 @@ def make_updated_characteristics(baseline_file,
 
     :rtype: None
     """
-    process_time = Time.now()
+    process_time = Time(opt.process_time) if opt.process_time else Time.now()
 
     # Calculate new SI_ALIGN matrices based on supplied aimpoint offsets
     si_align_acis_i = calc_si_align(dy_acis_i / 3600, dz_acis_i / 3600.)
