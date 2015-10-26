@@ -1,0 +1,22 @@
+
+fovid: fov0
+   groupid: 
+   grouping: None
+   coordinates: 10, 20
+   target: 
+   roll: 30
+   offsety: 0.0
+   offsetz: -0.3
+   offsetsimz: 0.0
+   offsetsimzmm: 0.0
+   grating: None
+   showtarget: 1
+   showopticalaxis: 1
+   showaimpoint: 1
+   aca: 0
+   instrument: ACIS-S
+   unselectedchips: 0
+   chips: (I2) (I3) S1 S2 S3 S4
+   subarrays: None
+   exposuremode: TE
+   nodeboundaries: 0

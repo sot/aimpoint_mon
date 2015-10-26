@@ -1,0 +1,99 @@
+<HTML>
+<HEAD>
+</HEAD>
+<BODY>
+
+<H1>Obsvis checks of offsets to match new aimpoints</H1>
+
+<H2>ACIS-S</H2>
+
+<P>Displayed are the offset required to place the target at the corner of S3 as shown in
+  the figure on the right</P>
+
+<table>
+<tr>
+<td>
+<img src="acis_s/orig_obsvis.png" width=400>
+</td>
+<td>
+<img src="acis_s/orig_obsvis_corner.png" width=400>
+</td>
+</tr>
+</table>
+
+<P>And after adjusting the obsvis reference aimpoint to match the 6 month aimpoint:</P>
+
+<pre>
+224c224
+< ACIS-S.instrumentcenter.coords.pixel "200.7, 476.9"
+---
+> ACIS-S.instrumentcenter.coords.pixel "218.5, 483.9"
+</pre>
+
+<P>here are the new offsets required to place the target at the corner of S3 as shown.
+
+<table>
+<tr>
+<td>
+<img src="acis_s/new_obsvis.png" width=400>
+</td>
+<td>
+<img src="acis_s/new_obsvis_corner.png" width=400>
+</td>
+</tr>
+</table>
+
+<TABLE border=1>
+<tr><th></th><th>Planning Aimpoint</th><th>Proposed Aimpoint</th><th>Delta</th></tr>
+<tr><td>Y-Offset</td><td>1.640</td><td>1.785</td><td>+0.145 arcmin</td></tr>
+<tr><td>Z-Offset</td><td>3.905</td><td>3.965</td><td>+0.060 arcmin</td></tr>
+</TABLE>
+
+<H2>ACIS-I</H2>
+
+<table>
+<tr>
+<td>
+<img src="acis_i/orig_obsvis.png" width=400>
+</td>
+<td>
+<img src="acis_i/orig_obsvis_corner.png" width=400>
+</td>
+</tr>
+</table>
+
+
+<pre>
+fido: diff orig_obsvis.cal new_obsvis.cal
+221c221
+< ACIS-I.instrumentcenter.coords.pixel "930.2, 1009.6"
+---
+> ACIS-I.instrumentcenter.coords.pixel "935.8, 996.9"
+</pre>
+
+
+<table>
+<tr>
+<td>
+<img src="acis_i/new_obsvis.png" width=400>
+</td>
+<td>
+<img src="acis_i/new_obsvis_corner.png" width=400>
+</td>
+</tr>
+</table>
+
+
+<TABLE border=1>
+<tr><th></th><th>Planning Aimpoint</th><th>Proposed Aimpoint</th><th>Delta</th></tr>
+<tr><td>Y-Offset</td><td>0.120</td><td>0.220</td><td>+0.100 arcmin</td></tr>
+<tr><td>Z-Offset</td><td>-0.765</td><td>-0.725</td><td>+0.040 arcmin</td></tr>
+</TABLE>
+
+<H2>Conclusions</H2>
+
+<P>The calculated delta offsets from direct use of the proposed 6m aimpoint in obsvis are very close
+  to the proposed deltas already calculated and presented on the aimpoint page, and the
+  signs appear correct.</P>
+
+</BODY>

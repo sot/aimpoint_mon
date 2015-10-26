@@ -1,0 +1,378 @@
+#obsviscalibration version 1.8a
+
+# _INSERT_SAO_COPYRIGHT_HERE_(2007,2008,2009,2010,2011,2012,2013,2014)_
+# _INSERT_GPL_LICENSE_HERE_
+
+
+#
+# ObsVis Calibration File Version 1.8a
+#
+#############################################################################
+
+
+# ACIS chip definitions
+# 
+
+maxenabledchips 6
+maxselectchips 5
+ACIS.chiplabels "I0 I1 I2 I3 S0 S1 S2 S3 S4 S5"
+
+ACIS-I.chips.none "1 1 1 1 0 0 2 0 0 0"
+ACIS-I.chips.letg "1 1 1 1 0 0 2 2 0 0"
+ACIS-I.chips.hetg "1 1 1 1 0 0 2 2 0 0"
+ACIS-S.chips.none "0 0 2 2 0 1 1 1 1 0"
+ACIS-S.chips.letg "0 0 0 0 2 1 1 1 1 2"
+ACIS-S.chips.hetg "0 0 0 0 2 1 1 1 1 2"
+
+#############################################################################
+
+#
+# Y/Z detector target offset definitions
+# For each detector, {min|max}{y|z}offset defines the minimum and maximum
+# allowable Y and Z target offsets in arcmins that RPS will accept.
+# {y|z}offset define the default offset values if none is explicitly
+# specified by the user.
+# Default offsets updated based on email from Ping Zhao via Dale Graessle,
+# dated 5 Nov 2014.
+# These positions supercede all previous values.
+#
+
+# ACIS-I
+
+ACIS-I.minyoffset.arcmin  -10.0
+ACIS-I.maxyoffset.arcmin 10.0
+ACIS-I.minzoffset.arcmin -10.0
+ACIS-I.maxzoffset.arcmin 10.0
+	
+ACIS-I.yoffset.none.arcmin -0.3
+ACIS-I.yoffset.letg.arcmin -0.3
+ACIS-I.yoffset.hetg.arcmin -0.3
+ACIS-I.zoffset.none.arcmin -0.3
+ACIS-I.zoffset.letg.arcmin -0.3
+ACIS-I.zoffset.hetg.arcmin -0.3
+	
+# ACIS-S
+	
+ACIS-S.minyoffset.arcmin -30.0
+ACIS-S.maxyoffset.arcmin 30.0
+ACIS-S.minzoffset.arcmin -30.0
+ACIS-S.maxzoffset.arcmin 30.0
+	
+ACIS-S.yoffset.none.arcmin 0.0
+ACIS-S.yoffset.letg.arcmin 1.2
+ACIS-S.yoffset.hetg.arcmin 0.0
+ACIS-S.zoffset.none.arcmin -0.3
+ACIS-S.zoffset.letg.arcmin -0.3
+ACIS-S.zoffset.hetg.arcmin -0.3
+	
+# HRC-I
+	
+HRC-I.minyoffset.arcmin -20.0
+HRC-I.maxyoffset.arcmin 20.0
+HRC-I.minzoffset.arcmin -20.0
+HRC-I.maxzoffset.arcmin 20.0
+	
+HRC-I.yoffset.none.arcmin 0.0
+HRC-I.yoffset.letg.arcmin 0.0
+HRC-I.yoffset.hetg.arcmin 0.0
+HRC-I.zoffset.none.arcmin 0.0
+HRC-I.zoffset.letg.arcmin 0.0
+HRC-I.zoffset.hetg.arcmin 0.0
+	
+# HRC-S
+	
+HRC-S.minyoffset.arcmin -50.0
+HRC-S.maxyoffset.arcmin 50.0
+HRC-S.minzoffset.arcmin -50.0
+HRC-S.maxzoffset.arcmin 50.0
+
+HRC-S.yoffset.none.arcmin 0.0
+HRC-S.yoffset.letg.arcmin 0.0
+HRC-S.yoffset.hetg.arcmin 0.0
+HRC-S.zoffset.none.arcmin 0.0
+HRC-S.zoffset.letg.arcmin 0.0
+HRC-S.zoffset.hetg.arcmin 0.0
+
+#############################################################################
+
+#
+# SIM translation offset definitions
+# For each detector, {min|max}simzoffset defines the minimum and maximum
+# allowable SIM Z offsets in mm that RPS will accept.
+# simzoffset defines the default offset value if none is explicitly
+# specified by the user.
+#
+# IMPORTANT NOTES:
+#
+# THESE VALUES ARE IN mm.  To convert to arcmin, divide by the plate scale 
+# value (arcmin.mm).
+#
+# RPS requires the input in ***mm***, so this should be the default entry
+# mode for ObsVis.
+#
+# The default values for ACIS-S + grating depend on the ACIS Exposure Mode
+# (TE or CC).  The user must specify either TE or CC, with the default being
+# TE.  The default SIM Z offset values are encoded ACIS-S.simzoffset.letg.te
+# etc. for ACIS-S.
+# 
+
+# ACIS-I
+
+ACIS-I.minsimzoffset.mm -22.5685
+ACIS-I.maxsimzoffset.mm 27.4739
+ACIS-I.simzoffset.none.mm 0.0
+ACIS-I.simzoffset.letg.mm 0.0
+ACIS-I.simzoffset.hetg.mm 0.0
+
+	
+# ACIS-S
+
+ACIS-S.minsimzoffset.mm -190.500
+ACIS-S.maxsimzoffset.mm 22.5685
+ACIS-S.simzoffset.none.mm 0.0
+ACIS-S.simzoffset.letg.te.mm -8.0
+ACIS-S.simzoffset.letg.cc.mm -8.0
+ACIS-S.simzoffset.hetg.te.mm -3.0
+ACIS-S.simzoffset.hetg.cc.mm -4.0
+	
+# HRC-I
+
+HRC-I.minsimzoffset.mm -61.3518
+HRC-I.maxsimzoffset.mm 126.621
+HRC-I.simzoffset.none.mm 0.0
+HRC-I.simzoffset.letg.mm 0.0
+HRC-I.simzoffset.hetg.mm 0.0
+
+
+# HRC-S
+
+HRC-S.minsimzoffset.mm -12.5439
+HRC-S.maxsimzoffset.mm 61.3518
+HRC-S.simzoffset.none.mm 0.0
+HRC-S.simzoffset.letg.mm 0.0
+HRC-S.simzoffset.hetg.mm 0.0
+
+	
+
+#############################################################################
+
+#
+# ACIS subarray definitions
+# For each detector, subarray<n>startrow and subarray<n>rowcount define the
+# starting row and row count for the default 1/<n> subarrays
+# In all cases, rows are numbered 1 - 1024
+#
+
+subarrayminstartrow 1
+subarraymaxrowcount 1024
+subarraycustomminrowcountone 100
+subarraycustomminrowcountmany 128
+	
+# ACIS-I
+	
+ACIS-I.subarray2startrow 513
+ACIS-I.subarray2rowcount 512    
+ACIS-I.subarray4startrow 769
+ACIS-I.subarray4rowcount 256
+ACIS-I.subarray8startrow 897
+ACIS-I.subarray8rowcount 128
+	
+# ACIS-S
+
+ACIS-S.subarray2startrow 257
+ACIS-S.subarray2rowcount 512    
+ACIS-S.subarray4startrow 385
+ACIS-S.subarray4rowcount 256
+ACIS-S.subarray8startrow 449
+ACIS-S.subarray8rowcount 128
+        
+#############################################################################
+
+#
+# ACIS window definitions
+#
+
+aciswindowsstartcolmin 1 
+aciswindowsstartcolmax 1023
+aciswindowscolcountmin 1 
+aciswindowscolcountmax 1024
+	
+aciswindowsstartrowmin 1 
+aciswindowsstartrowmax 1023
+aciswindowsrowcountmin 1 
+aciswindowsrowcountmax 1024
+	
+aciswindowsfrequencymin 0
+aciswindowsfrequencymax 255
+	
+aciswindowsordermin 1
+aciswindowsordermax 36
+        
+#############################################################################
+#
+# Aimpoint positions for nominal SIM Z (zero SIM Z offset) and
+# zero Y and Z offsets from email from Ping Zhao dated via Dale Graessle,
+# dated 5 Nov 2014.
+# These positions supercede all previous values.
+# Note that these are NOT the optical axis (focal point) values.
+#
+
+ACIS-I.instrumentcenter.chip 3
+ACIS-I.instrumentcenter.coords.pixel "935.8, 996.9"
+	
+ACIS-S.instrumentcenter.chip 7
+ACIS-S.instrumentcenter.coords.pixel "218.5, 483.9"
+	
+HRC-I.instrumentcenter.coords.pixel "7591.0, 7936.1"
+	
+HRC-S.instrumentcenter.chip 2
+HRC-S.instrumentcenter.coords.pixel "2041.0, 9062.7"
+
+#############################################################################
+#
+# Optical axis (focal point) positions for nominal SIM Z (zero 
+# SIM Z offset) and zero Y and Z offsets from email from Ping Zhao via Dale 
+# Graessle, dated 5 Nov 2014.  These positions supercede all previous values.
+#
+
+ACIS-I.opticalaxis.chip 3
+ACIS-I.opticalaxis.coords.pixel "967.7, 982.1"
+
+ACIS-S.opticalaxis.chip 7
+ACIS-S.opticalaxis.coords.pixel "230.3, 515.9"
+
+HRC-I.opticalaxis.coords.pixel "7580.6, 7757.3"
+
+HRC-S.opticalaxis.chip 2
+HRC-S.opticalaxis.coords.pixel "2188.0, 8928.8"
+
+
+
+
+#############################################################################
+#
+# Chip geometry in mm extracted from the CALDB geometry file
+# /data/CALDB/sdp/data/chandra/tel/bcf/geom/telD1999-07-23geomN0005.fits
+# Note that this is not entirely accurate (e.g., the actual HRC-I clocking angle
+# [Ping Zhao aimpoints memo] is clearly not included).
+# 
+
+ACIS.chip0.coords.pixel "polygon(0.5, 0.5, 1024.5, 0.5, 1024.5, 1024.5, 0.5, 1024.5)"
+ACIS.chip0.coords.mm "polygon(-26.483000, 23.076000, -26.545000, -1.4560000, -2.0130000, -1.4560000, -1.9510000, 23.076000)"
+ACIS.chip0.nodeboundaries.coords.pixel "polyline(256.5, 0.5, 256.5, 1024.5)|polyline(512.5, 0.5, 512.5, 1024.5)|polyline(768.5, 0.5, 768.5, 1024.5)"
+	
+ACIS.chip1.coords.pixel "polygon(0.5, 0.5, 1024.5, 0.5, 1024.5, 1024.5, 0.5, 1024.5)"
+ACIS.chip1.coords.mm "polygon(23.078000, -1.4460000, 23.016000, 23.086000, -1.5150000, 23.086000, -1.4530000, -1.4460000)"
+ACIS.chip1.nodeboundaries.coords.pixel "polyline(256.5, 0.5, 256.5, 1024.5)|polyline(512.5, 0.5, 512.5, 1024.5)|polyline(768.5, 0.5, 768.5, 1024.5)"
+	
+ACIS.chip2.coords.pixel "polygon(0.5, 0.5, 1024.5, 0.5, 1024.5, 1024.5, 0.5, 1024.5)"
+ACIS.chip2.coords.mm "polygon(-26.550000, -1.9920000, -26.488000, -26.525000, -1.9560000, -26.525000, -2.0180000, -1.9920000)"
+ACIS.chip2.nodeboundaries.coords.pixel "polyline(256.5, 0.5, 256.5, 1024.5)|polyline(512.5, 0.5, 512.5, 1024.5)|polyline(768.5, 0.5, 768.5, 1024.5)"
+	
+ACIS.chip3.coords.pixel "polygon(0.5, 0.5, 1024.5, 0.5, 1024.5, 1024.5, 0.5, 1024.5)"
+ACIS.chip3.coords.mm "polygon(23.011000, -26.530000, 23.073000, -1.9970000, -1.4580000, -1.9970000, -1.5200000, -26.530000)"
+ACIS.chip3.nodeboundaries.coords.pixel "polyline(256.5, 0.5, 256.5, 1024.5)|polyline(512.5, 0.5, 512.5, 1024.5)|polyline(768.5, 0.5, 768.5, 1024.5)"
+	
+ACIS.chip4.coords.pixel "polygon(0.5, 0.5, 1024.5, 0.5, 1024.5, 1024.5, 0.5, 1024.5)"
+ACIS.chip4.coords.mm "polygon(-81.113570, -59.207992, -56.554569, -59.195811, -56.566750, -34.632810, -81.125751, -34.644991)"
+ACIS.chip4.nodeboundaries.coords.pixel "polyline(256.5, 0.5, 256.5, 1024.5)|polyline(512.5, 0.5, 512.5, 1024.5)|polyline(768.5, 0.5, 768.5, 1024.5)"
+	
+ACIS.chip5.coords.pixel "polygon(0.5, 0.5, 1024.5, 0.5, 1024.5, 1024.5, 0.5, 1024.5)"
+ACIS.chip5.coords.mm "polygon(-56.089635, -59.195896, -31.529639, -59.176393, -31.550143, -34.613398, -56.110138, -34.633901)"
+ACIS.chip5.nodeboundaries.coords.pixel "polyline(256.5, 0.5, 256.5, 1024.5)|polyline(512.5, 0.5, 512.5, 1024.5)|polyline(768.5, 0.5, 768.5, 1024.5)"
+	
+ACIS.chip6.coords.pixel "polygon(0.5, 0.5, 1024.5, 0.5, 1024.5, 1024.5, 0.5, 1024.5)"
+ACIS.chip6.coords.mm "polygon(-31.076006, -59.183099, -6.5140111, -59.163656, -6.5344534, -34.600662, -31.096448, -34.621104)"
+ACIS.chip6.nodeboundaries.coords,pixel "polyline(256.5, 0.5, 256.5, 1024.5)|polyline(512.5, 0.5, 512.5, 1024.5)|polyline(768.5, 0.5, 768.5, 1024.5)"
+	
+ACIS.chip7.coords.pixel "polygon(0.5, 0.5, 1024.5, 0.5, 1024.5, 1024.5, 0.5, 1024.5)"
+ACIS.chip7.coords.mm "polygon(-6.0259914, -59.166009, 18.535009, -59.152991, 18.521991, -34.590991, -6.0390086, -34.604009)"
+ACIS.chip7.nodeboundaries.coords.pixel "polyline(256.5, 0.5, 256.5, 1024.5)|polyline(512.5, 0.5, 512.5, 1024.5)|polyline(768.5, 0.5, 768.5, 1024.5)"
+	
+ACIS.chip8.coords.pixel "polygon(0.5, 0.5, 1024.5, 0.5, 1024.5, 1024.5, 0.5, 1024.5)"
+ACIS.chip8.coords.mm "polygon( 18.962836, -59.152812, 43.523837, -59.140905, 43.511930, -34.578905, 18.950929, -34.590812)"
+ACIS.chip8.nodeboundaries.coords.pixel "polyline(256.5, 0.5, 256.5, 1024.5)|polyline(512.5, 0.5, 512.5, 1024.5)|polyline(768.5, 0.5, 768.5, 1024.5)"
+	
+ACIS.chip9.coords.pixel "polygon(0.5, 0.5, 1024.5, 0.5, 1024.5, 1024.5, 0.5, 1024.5)"
+ACIS.chip9.coords.mm "polygon( 43.958381, -59.138456, 68.518383, -59.128478, 68.508405, -34.566477, 43.948404, -34.575454)"
+ACIS.chip9.nodeboundaries.coords.pixel "polyline(256.5, 0.5, 256.5, 1024.5)|polyline(512.5, 0.5, 512.5, 1024.5)|polyline(768.5, 0.5, 768.5, 1024.5)"
+	
+#
+# The "good" pixel values indicate the effective detector boundaries not marked 
+# as bad pixels in the CALDB bad pixel files
+# /data/CALDB/sdp/data/chandra/hrc/bcf/badpix/hrciD1999-07-22badpixN0002.fits
+# /data/CALDB/sdp/data/chandra/hrc/bcf/badpix/hrcsD1999-07-22badpixN0003.fits
+#
+
+HRC.chiplabels "I0 S1 S2 S3"
+
+	
+HRC-I.chip0.coords.pixel "polygon(0.5, 0.5, 16384.5, 0.5, 16384.5, 16384.5, 0.5, 16384.5)"
+HRC-I.chip0.coords.mm "polygon(0.0000000, 74.481000, 74.481000, 0.0000000, 0.0000000, -74.481000, -74.481000, 0.0000000)"
+HRC-I.chip0.good.coords.pixel "polygon(639.5, 679.5, 14628.5, 679.5, 14628.5, 14676.5, 639.5, 14676.5)"
+
+#
+# The LESF marker pixel positions are derived crudely using the following
+# assumptions extracted from the instrument layout (POG Fig 7.1) and the
+# locations in wavelength of the edges of the HRC-S segments (POG Table 9.3),
+# assuming a dispersion of 1.148 ang/mm (POG Table 9.1). We assume the LESF
+# edge falls 4 mm above the centerline of the "good" detector region in u,
+# and terminates at the 18 ang locations measured from the edges of the center
+# segment in v. 
+#
+# The HRC-S timing mode boundaries are simply the good pixel boundaries for 
+# the center segment, with the two end segments disabled.
+#
+
+HRC-S.chip1.coords.pixel "polygon(0.5, 0.5, 4096.5, 0.5, 4096.5, 16384.5, 0.5, 16384.5)"
+HRC-S.chip1.coords.mm "polygon(161.96400, -12.969000, 161.93200, 13.364000, 56.163000, 13.235000, 56.196000, -13.098000)"
+HRC-S.chip1.good.coords.pixel "polygon(580.5, 1616.5, 3504.5, 1616.5, 3504.5, 16383.5, 580.5, 16383.5)"
+HRC-S.chip1.lesf.coords.pixel "polyline(2670.69, 1616.5, 2670.69, 16383.5)"
+
+
+	
+HRC-S.chip2.coords.pixel "polygon(0.5, 16384.5, 4096.5, 16384.5, 4096.5, 32768.5, 0.5, 32768.5)"
+HRC-S.chip2.coords.mm "polygon(56.196000, -13.098000, 56.163000, 13.235000, -49.638000, 13.106000, -49.605000, -13.227000)"
+HRC-S.chip2.good.coords.pixel "polygon(580.5, 16978.5, 3504.5, 16978.5, 3504.5, 32249.5, 580.5, 32249.5)"
+HRC-S.chip2.lesf.coords.pixel "polyline(2670.69, 16978.5, 2670.69, 22913.8, 580.5, 22913.8)|polyline(580.5, 27798.0, 2670.69, 27798.0, 2670.69, 32249.5)"
+
+	
+HRC-S.chip3.coords.pixel "polygon(0.5, 32768.5, 4096.5, 32768.5, 4096.5, 49152.5, 0.5, 49152.5)"
+HRC-S.chip3.coords.mm "polygon(-49.605000, -13.227000, -49.638000, 13.106000, -155.41500, 12.977000, -155.38300, -13.356000)"
+HRC-S.chip3.good.coords.pixel "polygon(580.5, 32928.5, 3504.5, 32928.5, 3504.5, 47641.5, 580.5, 47641.5)"
+HRC-S.chip3.lesf.coords.pixel "polyline(2670.69, 32928.5, 2670.69, 47641.5)"
+
+
+
+#############################################################################
+#
+# Dither pattern size for ACIS and HRC
+#
+#############################################################################
+
+
+ACIS.dither.x.arcsec 16
+ACIS.dither.y.arcsec 16
+
+
+HRC.dither.x.arcsec 40
+HRC.dither.y.arcsec 40
+
+
+
+#############################################################################
+#
+#
+# Plate scale in mm per arcmin
+#
+# Derived from ACIS pixel size 23.985 um (0.4920+/-0.0001 arcsec) 
+# [48.75 um/arcsec] from Table 6.1 of POG version 9.0
+# Note that the plate scale derived from the HRC pixel size [48.7998 um/arcsec] 
+# (POG Table 7.1) and the HRMA [48.82 um/arcsec] (POG Table 4.8] are slightly
+# different.  We choose the ACIS value since that is the most commonly used
+# instrument.
+#
+
+arcmin.mm 2.925
+
+
