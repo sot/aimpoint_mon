@@ -3,12 +3,43 @@
 </HEAD>
 <BODY>
 
-<H1>Obsvis checks of offsets to match new aimpoints</H1>
+<H1>Verify new aimpoint offsets via obsvis</H1>
+
+<P>ObsVis is a tool to aid in observation planning which allows the inspection of sky images
+  with overlaid instrument fields-of-view (FoV). ObsVis interfaces with the SAOimage DS9
+  image display tool, and facilitates detailed manipulation of Chandra pointing and
+  instrument parameters.</P>
+
+<P>Obsvis includes code to work with target offsets as specified by users, and to place
+  targets on the detectors using those supplied offsets.  To perform that mapping, obsvis
+  uses an aimpoint in its calibration file specified in chip X and chip Y.  In the
+  following verification test, I've:
+
+<UL>
+<LI>Used obsvis to (manually) determined the target offsets to place a "target" at a specific ACIS chip corner
+ (fixed position in chip coordinates)</LI>
+<LI>Updated the obsvis calibration file with a new aimpoint (from the aimpoint_mon
+  page)</LI>
+<LI>Used obsvis to manually determine the new target offsets required to place a target at
+ the same ACIS chip corner</LI>
+<LI>Calculated the difference in target offset</LI>
+</UL>
+
+The difference in offsets is consistent with the values that were reported on the
+aimpoint_mon page.  The table below reference the Chip positions of the POG Aimpoint and the 6-Month aimpoint reported on the aimpoint_mon page at the time of this testing, and the corresponding detector offsets between the two.
+
+<table border=1>
+<TR><TH></TH><TH>Detector</TH><TH>Chip X</TH><TH>Chip Y</TH><TH>Y det offset (arcmin)</TH><TH>Z det offset (arcmin)</TH><TR>
+<TR><TD>POG Aimpoint</TD><TD>ACIS-I</TD><TD>930.2</TD><TD>1009.6</TD><TD></TD><TD></TD></TR>
+<TR><TD>6M aimpoint mon</TD><TD>ACIS-I</TD><TD>935.8</TD><TD>996.9</TD><TD>0.104</TD><TD>0.046</TD></TR>
+<TR><TD>POG Aimpoint</TD><TD>ACIS-I</TD><TD>200.7</TD><TD>476.9</TD><TD></TD><TD></TD></TR>
+<TR><TD>6M aimpoint mon</TD><TD>ACIS-S</TD><TD>218.5</TD><TD>483.9</TD><TD>0.146</TD><TD>0.057</TD></TR>
+</table>
 
 <H2>ACIS-S</H2>
 
-<P>Displayed are the offset required to place the target at the corner of S3 as shown in
-  the figure on the right</P>
+<P>In obsvis, with the calibration file set to use the POG aimpoint, offsets were manually determined to place the
+target at the corner of S3 as shown in the figure on the right</P>
 
 <table>
 <tr>
@@ -21,16 +52,16 @@
 </tr>
 </table>
 
-<P>And after adjusting the obsvis reference aimpoint to match the 6 month aimpoint:</P>
+<P>Then, the obsvis.cal file was updated with the new "6-month" aimpoint in ChipX, ChipY from the aimpoint_mon page.</P>
 
 <pre>
-224c224
+Old Aimpoint in Obsvis Cal file
 < ACIS-S.instrumentcenter.coords.pixel "200.7, 476.9"
----
+New Aimpoint in Obsvis Cal file
 > ACIS-S.instrumentcenter.coords.pixel "218.5, 483.9"
 </pre>
 
-<P>here are the new offsets required to place the target at the corner of S3 as shown.
+<P>New offsets were manually determined to place the target at the corner of S3 again.
 
 <table>
 <tr>
@@ -44,12 +75,15 @@
 </table>
 
 <TABLE border=1>
-<tr><th></th><th>Planning Aimpoint</th><th>Proposed Aimpoint</th><th>Delta</th></tr>
+<tr><th></th><th>Using POG Aimpoint</th><th>Using '6-month' Aimpoint</th><th>Delta</th></tr>
 <tr><td>Y-Offset</td><td>1.640</td><td>1.785</td><td>+0.145 arcmin</td></tr>
 <tr><td>Z-Offset</td><td>3.905</td><td>3.965</td><td>+0.060 arcmin</td></tr>
 </TABLE>
 
 <H2>ACIS-I</H2>
+
+<P>In obsvis, with the calibration file set to use the POG aimpoint, offsets were manually determined to place the
+target at the inside corner of I3 as shown in the figure on the right</P>
 
 <table>
 <tr>
@@ -63,11 +97,11 @@
 </table>
 
 
+<P>Then, the obsvis.cal file was updated with the new "6-month" aimpoint in ChipX, ChipY from the aimpoint_mon page.</P>
 <pre>
-fido: diff orig_obsvis.cal new_obsvis.cal
-221c221
+Old Aimpoint in Obsvis Cal file
 < ACIS-I.instrumentcenter.coords.pixel "930.2, 1009.6"
----
+New Aimpoint in Obsvis Cal file
 > ACIS-I.instrumentcenter.coords.pixel "935.8, 996.9"
 </pre>
 
@@ -85,15 +119,25 @@ fido: diff orig_obsvis.cal new_obsvis.cal
 
 
 <TABLE border=1>
-<tr><th></th><th>Planning Aimpoint</th><th>Proposed Aimpoint</th><th>Delta</th></tr>
+<tr><th></th><th>Using POG Aimpoint</th><th>Using "6-month" Aimpoint</th><th>Delta</th></tr>
 <tr><td>Y-Offset</td><td>0.120</td><td>0.220</td><td>+0.100 arcmin</td></tr>
 <tr><td>Z-Offset</td><td>-0.765</td><td>-0.725</td><td>+0.040 arcmin</td></tr>
 </TABLE>
 
 <H2>Conclusions</H2>
 
-<P>The calculated delta offsets from direct use of the proposed 6m aimpoint in obsvis are very close
+<P>The calculated delta offsets from direct use of the proposed 6-month aimpoint in obsvis are very close
   to the proposed deltas already calculated and presented on the aimpoint page, and the
-  signs appear correct.</P>
+  signs appear correct.  The "manually-determined" offsets are subject to some error in the manual alignment of the
+  target on the edge of the chip.
+
+<TABLE border=1>
+<TR><TH></TH><TH colspan=2>Obsvis manual determination</TH><TH colspan=2>Aimpoint page values</TH></TR>
+<TR><TH>Detector</TH><TH>Y-Off(arcmin)</TH><TH>Z-Off(arcmin)</TH><TH>Y-Off(arcmin)</TH><TH>Z-Off(arcmin)</TH></TR>
+<TR><TD>ACIS-I</TD><TD>+0.100</TD><TD>+0.040</TD><TD>+0.104</TD><TD>+0.046</TD></TR>
+<TR><TD>ACIS-S</TD><TD>+0.145</TD><TD>+0.060</TD><TD>+0.146</TD><TD>+0.057</TD></TR>
+</TABLE>
+
+</P>
 
 </BODY>
