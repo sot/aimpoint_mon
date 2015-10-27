@@ -4,9 +4,11 @@ from Quaternion import Quat
 # Baseline ODB_SI_ALIGN used prior to Nov. 2015.  This is expressed to
 # 5 digits of precision and is not an orthonormal rotation matrix.
 
+# The numerical values here are copied verbatim from the ODB, but
+# they are defined in Fortran order there.  Transpose for C-order.
 ODB_SI_ALIGN = np.array([[1.0, 3.3742E-4, 2.7344E-4],
                          [-3.3742E-4, 1.0, 0.0],
-                         [-2.7344E-4, 0.0, 1.0]])
+                         [-2.7344E-4, 0.0, 1.0]]).transpose()
 
 # Fix the transform matrix by converting to a normalized Quaternion
 # and then back.  This gives:
@@ -92,7 +94,7 @@ def test_si_align_with_data():
     # values and with no target offset applied.  This must match the as-planned
     # attitude using the baseline ODB_SI_ALIGN and WITH a target offset applied.
     si_align = calc_si_align(dy_offset, dz_offset, check_consistency=True)
-    q_pcad_align = q_targ * Quat(si_align)
+    q_pcad_align = q_targ * Quat(si_align).inv()
 
     dy_align, dz_align = calc_offsets(ra_targ, dec_targ, *q_pcad_align.equatorial)
     dq = q_pcad.inv() * q_pcad_align
@@ -122,26 +124,26 @@ def calc_si_align(dy_align=0.0, dz_align=0.0, check_consistency=True):
     # Define new SI_ALIGN as a delta quaternion update to existing.
     # The minus signs here were empirically determined to pass tests.
     # This is the only place where signs are chosen without a clear justification.
-    si_align = Quat([-dy_align, -dz_align, 0.0]) * Quat(ODB_SI_ALIGN)
-
-    # Get the 3x3 transform matrix corresponding to the si_align quaternion
-    out = si_align.transform
+    q_align = Quat([dy_align, dz_align, 0.0])
+    q_si_align = Quat(ODB_SI_ALIGN) * q_align
+    si_align = q_si_align.transform
 
     # Double check that the si_align corresponds to the y and z offsets of the target in
     # that frame, in degrees.
     if check_consistency:
         q_pcad = Quat([1, 2, 3])  # Arbitrary attitude
-        q_targ = q_pcad * si_align.inv()
-        y_off, z_off = calc_offsets(q_targ.ra, q_targ.dec, q_pcad.ra, q_pcad.dec, q_pcad.roll)
+        q_targ = q_pcad * q_si_align
+        y_off, z_off = calc_offsets(q_targ.ra, q_targ.dec,
+                                    q_pcad.ra, q_pcad.dec, q_pcad.roll)
 
         # Offset as expected?
         assert np.allclose(dy_align, y_off, atol=1e-6)
         assert np.allclose(dz_align, z_off, atol=1e-6)
 
         # Orthonormal?
-        assert np.allclose(out.T.dot(out), np.eye(3))
+        assert np.allclose(si_align.T.dot(si_align), np.eye(3))
 
-    return out
+    return si_align
 
 
 def radec2yz(ra, dec, q):
@@ -181,15 +183,15 @@ def calc_offsets(ra_targ, dec_targ, ra_pcad, dec_pcad, roll_pcad):
     :rtype: tuple (y_off, z_off) arcmins
     """
     # Convert si_align transform matrix into a Quaternion
-    si_align = Quat(ODB_SI_ALIGN)
+    q_si_align = Quat(ODB_SI_ALIGN)
 
     # Pointing quaternion
     q_pcad = Quat([ra_pcad, dec_pcad, roll_pcad])
 
     # Pointing quaternion of nominal HRMA frame after adjusting for the alignment offset.
-    # The sense of si_align is that q_pcad = q_hrma * si_align, where si_align is
+    # The sense of si_align is that q_hrma = q_pcad * si_align, where si_align is
     # effectively a delta quaternion.
-    q_hrma = q_pcad * si_align.inv()
+    q_hrma = q_pcad * q_si_align
 
     # the y and z offsets of the target in that frame, in degrees
     y_off, z_off = radec2yz(ra_targ, dec_targ, q_hrma)
@@ -213,7 +215,7 @@ def calc_pcad_from_targ(ra_targ, dec_targ, roll_targ, y_off, z_off, si_align=ODB
     """
     q_si_align = Quat(si_align)
     q_targ = Quat([ra_targ, dec_targ, roll_targ])
-    q_off = Quat([-y_off, -z_off, 0])
-    q_pcad = q_targ * q_off * q_si_align
+    q_off = Quat([y_off, z_off, 0])
+    q_pcad = q_targ * q_off.inv() * q_si_align.inv()
 
     return q_pcad
