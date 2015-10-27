@@ -15,4 +15,4 @@ mid_dz = (np.max(asols['dz']) + np.min(asols['dz'])) / 2.
 dr = np.sqrt((asols['dy'] - mid_dy) ** 2 + (asols['dz'] - mid_dz) ** 2)
 dr_99 = np.percentile(dr, 99)
 dr_99_arcsec = dr_99 * 20
-print "99th percentile radius of 6m data is {} arcsec".format(dr_99_arcsec)
+print("99th percentile radius of 6-month data is {} arcsec".format(dr_99_arcsec))
