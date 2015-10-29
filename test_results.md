@@ -19,6 +19,8 @@ The following three independent analyses have been done:
   large offset).
 - J. McDowell: used DS tool `dmcoords` to independently confirm the derived relationship
   between *aspect solution* DY, DY and CHIPX, CHIPY.
+- J. Connelly used ObsVis in a different way from Tennant to confirm the sign and magnitude of
+offsets
 
 **Test pass: Yes**
 
