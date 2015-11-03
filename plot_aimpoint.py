@@ -9,6 +9,7 @@ from itertools import izip
 import numpy as np
 from astropy.table import Table, Column
 from astropy.time import Time
+import astropy.units as u
 from Ska.engarchive import fetch_eng as fetch
 import tables
 import pyyaks.logger
@@ -31,7 +32,14 @@ POG = {'ACIS-I': (930.2, 1009.6),
        'ACIS-S': (200.7, 476.9),
        'year': 2015.4}
 
+# Aimpoint jumps as seen and defined in aimpoint_jumps.ipynb.
+# The jump is defined as (mean value before) - (mean value after)
+# in arcsec.
+AIMPOINT_JUMPS = {'2015:265': {'d_dy': round(17.5 - 11.6, 1),
+                               'd_dz': round(17.8 - 17.0, 1)}}
+
 acis_arcsec_per_pix = 0.492
+BOX_DURATION = 0.5 * u.yr
 
 
 def get_opt(args=None):
@@ -40,6 +48,7 @@ def get_opt(args=None):
     parser.add_argument("--data-root",
                         default=".",
                         help="Root directory for asol and index files")
+
     return parser.parse_args(args)
 
 
@@ -68,6 +77,17 @@ def get_asol(info=None):
     if info is not None:
         info['last_ctime'] = Time(asol['time'][-1], format='cxcsec').datetime.ctime()
         info['last_obsid'] = asol['obsid'][-1]
+
+    now = Time.now()
+    for date, jump in AIMPOINT_JUMPS.items():
+        if now - Time(date) < BOX_DURATION:
+            # Make the mean of the "before" interval match the mean of the "after" interval.
+            i0 = np.searchsorted(asol['time'], Time(date).cxcsec)
+            asol['dy'][:i0] -= jump['d_dy'] / 20.0
+            asol['dz'][:i0] -= jump['d_dz'] / 20.0
+            # Capture info about jump
+            info.setdefault('aimpoint_jumps', {})[date] = jump
+            logger.info('Applying aimpoint jump of {} at {}'.format(jump, date))
 
     return asol
 
@@ -278,7 +298,7 @@ class AsolBinnedStats(object):
 
         # Make the 6-month bounding box
         asol = self.asol
-        iok = np.searchsorted(asol['year'], asol['year'][-1] - 0.5)
+        iok = np.searchsorted(asol['year'], asol['year'][-1] - BOX_DURATION.to(u.yr).value)
         asol = self.asol[iok:]
         x0, x1 = np.min(asol[self.chipx_col]), np.max(asol[self.chipx_col])
         y0, y1 = np.min(asol[self.chipy_col]), np.max(asol[self.chipy_col])
