@@ -302,6 +302,8 @@ class AsolBinnedStats(object):
         asol = self.asol[iok:]
         x0, x1 = np.min(asol[self.chipx_col]), np.max(asol[self.chipx_col])
         y0, y1 = np.min(asol[self.chipy_col]), np.max(asol[self.chipy_col])
+        ix0, ix1 = np.argmin(asol[self.chipx_col]), np.argmax(asol[self.chipx_col])
+        iy0, iy1 = np.argmin(asol[self.chipy_col]), np.argmax(asol[self.chipy_col])
         dx = x1 - x0
         dy = y1 - y0
         ax1.add_patch(Rectangle((x0, y0), dx, dy,
@@ -319,10 +321,14 @@ class AsolBinnedStats(object):
             info_det['chipx']['min'] = x0
             info_det['chipx']['mid'] = xmid = (x0 + x1) / 2
             info_det['chipx']['max'] = x1
+            info_det['chipx']['date_min'] = Time(asol['time'][ix0], format='cxcsec').yday
+            info_det['chipx']['date_max'] = Time(asol['time'][ix1], format='cxcsec').yday
             info_det['chipy'] = {}
             info_det['chipy']['min'] = y0
             info_det['chipy']['mid'] = ymid = (y0 + y1) / 2
             info_det['chipy']['max'] = y1
+            info_det['chipy']['date_min'] = Time(asol['time'][iy0], format='cxcsec').yday
+            info_det['chipy']['date_max'] = Time(asol['time'][iy1], format='cxcsec').yday
             if det == 'ACIS-S':
                 info_det['dDY'] = -(pogx - xmid) * acis_arcsec_per_pix
                 info_det['dDZ'] = -(pogy - ymid) * acis_arcsec_per_pix
