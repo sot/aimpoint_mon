@@ -156,3 +156,16 @@ Obsid P3701:  DY= -0.00  DZ= -0.00  droll=  0.00 arcsec     --
 ```
 
 **Test pass: Yes**
+
+### Regression test after updates to calc_si_align and plot_aimpoints
+
+Following comments from community, calc_si_align code was updated
+so that the ODB_SI_ALIGN matrix was transposed.  This makes the
+matrix correspond to the OFLS matrix.
+
+Using plot_aimpoints.py with the AIMPOINT_JUMPS variable stubbed
+out, a new local info.json was created.  This was then used
+to compute the CHARACTERIS_03NOV15 files.
+
+Confimed that diffs from CHARACTERIS_12OCT15 were as expected
+(basically just negligible numerical diffs).
