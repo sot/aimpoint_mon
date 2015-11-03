@@ -116,8 +116,10 @@ def make_updated_characteristics(baseline_file, offsets=(-5, 10, 15, -20)):
     fmt_first = '       ODB_SI_ALIGN     = {:.6e}, {:.6e}, {:.6e},'
     fmt_other = '                          {:.6e}, {:.6e}, {:.6e},'
 
-    # Make updated lines in characteristics
-    for i, vals in enumerate(np.concatenate([si_align_acis_i, si_align_acis_s])):
+    # Make updated lines in characteristics.  Note the use of the transpose (.T)
+    # below so that the output is in Row-major (Fortran) order as required by
+    # the CHARACTERISTICS.
+    for i, vals in enumerate(np.concatenate([si_align_acis_i.T, si_align_acis_s.T])):
         fmt = fmt_first if i == 0 else fmt_other
         out = fmt.format(*vals).upper()
         if i < len(comments):
@@ -248,7 +250,7 @@ def get_baseline_characteristics_file():
     # Get the directory of available files.  This is an HTML doc which consists of single
     # a list of links.
     logger.info('Getting baseline characteristics file')
-    occweb.URLS['char_constr'] = '/occweb/FOT/configuration/documents/Characteristics_Constraints'
+    occweb.URLS['char_constr'] = '/occweb/FOT/configuration/documents/Characteristics_Constraints/'
     html = occweb.get_url('char_constr')
     html = scrape.cleantext(html)
     page = parse_html(html)
