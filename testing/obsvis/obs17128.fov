@@ -1,0 +1,21 @@
+fovid: obs17128
+   groupid: 
+   grouping: None
+   coordinates: 9.267083, -1.152222
+   target: 3C 15
+   roll: 103.917712473
+   offsety: 0.0
+   offsetz: -0.3
+   offsetsimz: 0.0
+   offsetsimzmm: 0.0
+   grating: NONE
+   showtarget: 1
+   showopticalaxis: 1
+   showaimpoint: 1
+   aca: 0
+   instrument: ACIS-S
+   unselectedchips: 0
+   chips: S4 S2 S3 S1 (I2) (I3)
+   subarrays: None
+   exposuremode: TE
+   nodeboundaries: 0
