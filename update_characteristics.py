@@ -12,6 +12,7 @@ import argparse
 import json
 import copy
 from difflib import HtmlDiff
+import hashlib
 
 import numpy as np
 from astropy.time import Time
@@ -20,6 +21,7 @@ from kadi import occweb
 from kadi.events import scrape
 from bs4 import BeautifulSoup as parse_html
 import pyyaks.logger
+import jinja2
 
 from calc_si_align import calc_si_align
 
@@ -128,7 +130,7 @@ def make_updated_characteristics(baseline_file, offsets=(-5, 10, 15, -20)):
         lines[i + start] = out + os.linesep
 
     # Write the new file into the characteristics/ directory
-    filename = 'CHARACTERIS_{}'.format(process_time.datetime.strftime('%d%b%g').upper())
+    filename = 'CHARACTERIS_{}'.format(process_time.datetime.strftime('%d%b%y').upper())
     updated_file = os.path.join(opt.data_root, 'characteristics', filename)
     logger.info('Writing updated characteristics {}'.format(updated_file))
     with open(updated_file, 'w') as fh:
@@ -291,6 +293,19 @@ def get_baseline_characteristics_file():
     return outfile
 
 
+def get_email_text(baseline, updated):
+    updated = os.path.join(opt.data_root, 'characteristics', updated)
+    with open('email_template.txt') as fh:
+        template = jinja2.Template(fh.read())
+    md5 = hashlib.md5()
+    with open(updated) as fh:
+        md5.update(fh.read())
+    out = template.render(base=baseline[-7:],
+                          new=updated[-7:],
+                          md5=md5.hexdigest())
+    return out
+
+
 def main():
     global opt, version
     opt = get_opt()
@@ -302,6 +317,10 @@ def main():
     write_index_file(info)
     write_diff_file(info['updated_file'], info['baseline_file'])
 
+    print()
+    print('SEND FOLLOWING EMAIL\n')
+    out = get_email_text(info['baseline_file'], info['updated_file'])
+    print(out)
 
 if __name__ == '__main__':
     main()
