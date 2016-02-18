@@ -1,0 +1,13 @@
+cd /proj/sot/ska/share/aimpoint_mon
+./update_characteristics.py --data-root=/proj/sot/ska/data/aimpoint_mon
+
+rsync -av --dry-run {/proj/sot/ska/data,/data/mta4/www/ASPECT}/aimpoint_mon/characteristics/
+rsync -av {/proj/sot/ska/data,/data/mta4/www/ASPECT}/aimpoint_mon/characteristics/
+
+cd /proj/sot/ska/data/aimpoint_mon/characteristics
+cat ~/.netrc
+sftp taldcroft@lucky
+cd /home/jrose/Incoming/Certified-Rev3
+put CHARACTERIS_.....
+
+Send generated email to fotmp@ipa, fot_config@ipa, flight directors
