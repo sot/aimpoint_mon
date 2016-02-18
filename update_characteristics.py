@@ -13,6 +13,7 @@ import json
 import copy
 from difflib import HtmlDiff
 import hashlib
+import shutil
 
 import numpy as np
 from astropy.time import Time
@@ -201,6 +202,7 @@ def write_index_file(info_table):
         if np.any(matching):
             logger.info('WARNING: replacing existing entry for updated_file={}'
                         .format(info_table['updated_file']))
+        shutil.copy(index_file, index_file + '.bak')
     else:
         index = Table(names=['updated_file', 'baseline_file', 'date',
                              'dy_acis_i', 'dz_acis_i', 'dy_acis_s', 'dz_acis_s'],
@@ -210,8 +212,7 @@ def write_index_file(info_table):
         index[colname].format = '.2f'
 
     logger.info('Writing index file {}'.format(index_file))
-    with open(index_file, 'w') as fh:
-        fh.writelines(line + os.linesep for line in index.pformat())
+    index.write(index_file, format='ascii.fixed_width_two_line')
 
     # Write an HTML index file as a table
     def self_link(vals):
@@ -232,6 +233,8 @@ def write_index_file(info_table):
 
     index_file = index_file + '.html'
     logger.info('Writing index.html file {}'.format(index_file))
+    if os.path.exists(index_file):
+        shutil.copy(index_file, index_file + '.bak')
     index.write(index_file, format='ascii.html')
 
     # Hack: undo the HTML escaping that table write does.
