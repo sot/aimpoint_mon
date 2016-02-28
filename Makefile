@@ -5,7 +5,7 @@ TASK = aimpoint_mon
 FLIGHT_ENV = SKA
 
 # Set the names of all files that get installed
-SHARE = make_web_page.py plot_aimpoint.py update_aimpoint_data.py update_characteristics.py
+SHARE = make_web_page.py plot_aimpoint.py update_aimpoint_data.py update_characteristics.py calc_si_align.py
 DATA = index_template.html task_schedule.cfg VERSION
 
 include /proj/sot/ska/include/Makefile.FLIGHT
