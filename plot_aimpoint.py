@@ -34,11 +34,11 @@ POG = {'ACIS-I': (930.2, 1009.6),
        'ACIS-S': (200.7, 476.9),
        'year': 2015.4}
 
-# Aimpoint jumps as seen and defined in aimpoint_jumps.ipynb.
-# The jump is defined as (mean value before) - (mean value after)
-# in arcsec.
-AIMPOINT_JUMPS = {'2015:265': {'d_dy': round(17.5 - 11.6, 1),
-                               'd_dz': round(17.8 - 17.0, 1)}}
+# Aimpoint jumps as seen and defined in fit_aimpoint_drift.ipynb.
+AIMPOINT_JUMPS = {'2015:006': {'d_dy': 4.4, 'd_dz': 1.9},
+                  '2015:265': {'d_dy': 4.8, 'd_dz': 0.5},
+                  '2016:064': {'d_dy': 2.0, 'd_dz': 1.0}
+                  }
 
 acis_arcsec_per_pix = 0.492
 
@@ -78,20 +78,35 @@ def get_asol(info=None):
 
     asol.sort('time')
 
+    # Include only points between --start and --stop
+    i0, i1 = np.searchsorted(asol['time'], [start.cxcsec, stop.cxcsec])
+    asol = asol[i0:i1]
+
+    # Exclude from 10ksec before to 3 days after any normal sun or safe sun intervals.
+    normal_suns = events.normal_suns()
+    safe_suns = events.safe_suns()
+    normal_suns.interval_pad = 10000, 86400 * 3
+    safe_suns.interval_pad = 10000, 86400 * 3
+    exclude_intervals = (normal_suns | safe_suns).intervals(asol['time'][0], asol['time'][-1])
+    ok = np.ones(len(asol), dtype=np.bool)
+    for date0, date1 in exclude_intervals:
+        logger.info('Excluding asol values from {} to {} (normal/safe sun)'.format(date0, date1))
+        i0, i1 = np.searchsorted(asol['time'], Time([date0, date1], format='yday').cxcsec)
+        ok[i0:i1] = False
+    asol = asol[ok]
+
     if info is not None:
         info['last_ctime'] = Time(asol['time'][-1], format='cxcsec').datetime.ctime()
         info['last_obsid'] = asol['obsid'][-1]
 
-    now = Time.now()
     for date, jump in AIMPOINT_JUMPS.items():
-        if now - Time(date) < BOX_DURATION:
-            # Make the mean of the "before" interval match the mean of the "after" interval.
-            i0 = np.searchsorted(asol['time'], Time(date).cxcsec)
-            asol['dy'][:i0] -= jump['d_dy'] / 20.0
-            asol['dz'][:i0] -= jump['d_dz'] / 20.0
-            # Capture info about jump
-            info.setdefault('aimpoint_jumps', {})[date] = jump
-            logger.info('Applying aimpoint jump of {} at {}'.format(jump, date))
+        # Make the mean of the "before" interval match the mean of the "after" interval.
+        i0 = np.searchsorted(asol['time'], Time(date).cxcsec)
+        asol['dy'][:i0] -= jump['d_dy'] / 20.0
+        asol['dz'][:i0] -= jump['d_dz'] / 20.0
+        # Capture info about jump
+        info.setdefault('aimpoint_jumps', {})[date] = jump
+        logger.info('Applying aimpoint jump of {} at {}'.format(jump, date))
 
     return asol
 
