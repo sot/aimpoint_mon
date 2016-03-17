@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import division
+
 import json
 import re
 import os
@@ -39,7 +41,6 @@ AIMPOINT_JUMPS = {'2015:265': {'d_dy': round(17.5 - 11.6, 1),
                                'd_dz': round(17.8 - 17.0, 1)}}
 
 acis_arcsec_per_pix = 0.492
-BOX_DURATION = 0.5 * u.yr
 
 
 def get_opt(args=None):
@@ -48,6 +49,9 @@ def get_opt(args=None):
     parser.add_argument("--data-root",
                         default=".",
                         help="Root directory for asol and index files")
+    parser.add_argument("--box-duration",
+                        default=3,
+                        help="Duration before --stop over which to find aimpoint min/max (months)")
 
     return parser.parse_args(args)
 
@@ -296,9 +300,9 @@ class AsolBinnedStats(object):
 
         cm = matplotlib.cm.get_cmap('YlOrRd')
 
-        # Make the 6-month bounding box
+        # Make the N-month bounding box
         asol = self.asol
-        iok = np.searchsorted(asol['year'], asol['year'][-1] - BOX_DURATION.to(u.yr).value)
+        iok = np.searchsorted(asol['year'], asol['year'][-1] - opt.box_duration / 12)
         asol = self.asol[iok:]
         x0, x1 = np.min(asol[self.chipx_col]), np.max(asol[self.chipx_col])
         y0, y1 = np.min(asol[self.chipy_col]), np.max(asol[self.chipy_col])
@@ -306,7 +310,15 @@ class AsolBinnedStats(object):
         iy0, iy1 = np.argmin(asol[self.chipy_col]), np.argmax(asol[self.chipy_col])
         dx = x1 - x0
         dy = y1 - y0
+        year0 = asol['year'][0]
+        dyear = asol['year'][-1] - year0
         ax1.add_patch(Rectangle((x0, y0), dx, dy,
+                                facecolor='#fff8f8', edgecolor='k',
+                                zorder=-100))
+        ax2.add_patch(Rectangle((year0, x0), dyear, dx,
+                                facecolor='#fff8f8', edgecolor='k',
+                                zorder=-100))
+        ax3.add_patch(Rectangle((year0, y0), dyear, dy,
                                 facecolor='#fff8f8', edgecolor='k',
                                 zorder=-100))
         pogx = POG[self.det][0]
@@ -455,7 +467,10 @@ def make_pure_python(obj):
 def main():
     global opt
     opt = get_opt()
-    info = {'date': Time.now().iso}
+    info = {'date': opt.stop,
+            'start': opt.start,
+            'stop': opt.stop,
+            'box_duration_months': opt.box_duration}
 
     asol_aimpoint = get_asol(info)
 
