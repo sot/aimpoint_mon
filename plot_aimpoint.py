@@ -327,7 +327,7 @@ class AsolBinnedStats(object):
 
         # Make the N-month bounding box
         asol = self.asol
-        iok = np.searchsorted(asol['year'], asol['year'][-1] - opt.box_duration / 12)
+        iok = np.searchsorted(asol['year'], asol['year'][-1] - float(opt.box_duration) / 12)
         asol = self.asol[iok:]
         x0, x1 = np.min(asol[self.chipx_col]), np.max(asol[self.chipx_col])
         y0, y1 = np.min(asol[self.chipy_col]), np.max(asol[self.chipy_col])
