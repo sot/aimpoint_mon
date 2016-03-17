@@ -13,6 +13,7 @@ from astropy.table import Table, Column
 from astropy.time import Time
 import astropy.units as u
 from Ska.engarchive import fetch_eng as fetch
+from kadi import events
 import tables
 import pyyaks.logger
 import matplotlib
@@ -46,6 +47,12 @@ acis_arcsec_per_pix = 0.492
 def get_opt(args=None):
     parser = argparse.ArgumentParser(description='Plot aimpoint drift data '
                                      'from aspect solution files')
+    parser.add_argument("--start",
+                        default='2000:001',
+                        help="Processing start date (default=2000:001)")
+    parser.add_argument("--stop",
+                        default=Time.now().iso,
+                        help="Processing stop date (default=NOW)")
     parser.add_argument("--data-root",
                         default=".",
                         help="Root directory for asol and index files")
@@ -64,6 +71,9 @@ def get_asol(info=None):
     :param info: dict of processing information and outputs
     :returns: aspect solution data (Table)
     """
+    start = Time(opt.start)
+    stop = Time(opt.stop)
+
     h5_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
     logger.info('Reading asol file {}'.format(h5_file))
     h5 = tables.openFile(h5_file)
