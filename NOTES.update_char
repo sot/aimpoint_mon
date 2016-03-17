@@ -1,6 +1,18 @@
 cd /proj/sot/ska/share/aimpoint_mon
 ./update_characteristics.py --data-root=/proj/sot/ska/data/aimpoint_mon
 
+** Check outputs and results for sanity, in particular the new align values **
+
+To back out
+-----------
+cd /proj/sot/ska/data/aimpoint_mon
+mv index.bak index
+mv index.html.bak index.html
+rm <latest characteristic>*
+
+To promote
+----------
+
 rsync -av --dry-run {/proj/sot/ska/data,/data/mta4/www/ASPECT}/aimpoint_mon/characteristics/
 rsync -av {/proj/sot/ska/data,/data/mta4/www/ASPECT}/aimpoint_mon/characteristics/
 
