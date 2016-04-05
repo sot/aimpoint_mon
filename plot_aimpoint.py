@@ -210,44 +210,6 @@ class AsolBinnedStats(object):
 
         return chipx, chipy
 
-    def plot_chip_year_bokeh(self):
-        import bokeh.plotting as bp
-
-        det = self.det
-
-        bp.output_file('chip_year_{}.html'.format(self.det_title),
-                       title='{} CHIP vs year'.format(det))
-        TOOLS = 'pan,wheel_zoom,box_zoom,crosshair,reset'
-
-        ax1 = bp.figure(tools=TOOLS, toolbar_location='left',
-                        plot_width=800, height=300,
-                        title='{} aimpoint position (CCD {})'.format(det, self.ccd),
-                        y_axis_label='CHIPX')
-        ax2 = bp.figure(tools=TOOLS, width=800, height=300,
-                        x_range=ax1.x_range,
-                        x_axis_label='Year',
-                        y_axis_label='CHIPY')
-
-        for ax, xy in izip((ax1, ax2), ('x', 'y')):
-            ax.quad(left=self.min['year'],
-                    right=self.max['year'],
-                    bottom=self.min[self.chip_col + xy],
-                    top=self.max[self.chip_col + xy],
-                    fill_color='red', fill_alpha=0.5,
-                    line_color='black')
-
-            ax.quad(left=self.min['year'],
-                    right=self.max['year'],
-                    bottom=self.p10[self.chip_col + xy],
-                    top=self.p90[self.chip_col + xy],
-                    fill_color='blue', fill_alpha=0.5,
-                    line_color=None)
-
-        # Put the subplots in a gridplot
-        p = bp.gridplot([[ax1],
-                         [ax2]])
-        bp.save(p)
-
     def plot_intra_obs_dy_dz(self):
         # Make a table with the max delta chipx and chipy during each obsid.
         # First get the mins, maxes, means for each obsid by grouping.
@@ -442,52 +404,6 @@ class AsolBinnedStats(object):
         mpld3.save_html(fig, outroot + '.html')
         fig.patch.set_visible(False)
         plt.savefig(outroot + '.png', frameon=False)
-
-    def plot_chip_x_y_bokeh(self):
-        import bokeh.plotting as bp
-        from bokeh.models import ColumnDataSource
-        det = self.det
-
-        bp.output_file('chip_x_y_{}.html'.format(self.det_title),
-                       title='CHIP vs year for {}'.format(det))
-        TOOLS = 'pan,wheel_zoom,box_zoom,box_select,crosshair,reset'
-
-        year = self.mean['year']
-        chipx = self.mean[self.chipx_col]
-        chipy = self.mean[self.chipy_col]
-
-        source = ColumnDataSource(data=dict(year=year, chipx=chipx, chipy=chipy))
-
-        width = 500
-        ratio = 1.8
-        size = 4  # pixels
-
-        ax1 = bp.figure(tools=TOOLS, toolbar_location='left',
-                        width=width, height=width,
-                        title='{} aimpoint position (CCD {})'.format(det, self.ccd),
-                        x_axis_label='CHIPX',
-                        y_axis_label='CHIPY')
-        ax2 = bp.figure(tools=TOOLS, width=width, height=np.int(width // ratio),
-                        x_axis_label='Year',
-                        y_axis_label='CHIPX')
-        ax3 = bp.figure(tools=TOOLS, width=width, height=np.int(width // ratio),
-                        x_axis_label='Year',
-                        y_axis_label='CHIPY')
-
-        ax1.circle('chipx', 'chipy', source=source,
-                   size=size)
-
-        ax2.circle('year', 'chipx', source=source,
-                   size=size)
-
-        ax3.circle('year', 'chipy', source=source,
-                   size=size)
-
-        # Put the subplots in a gridplot
-        pv = bp.gridplot([[ax2],
-                          [ax3]])
-        p = bp.gridplot([[ax1], pv])
-        bp.save(p)
 
 
 def plot_housing_temperature():
