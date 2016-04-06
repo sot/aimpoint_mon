@@ -110,13 +110,15 @@ def get_asol(info=None):
         info['last_obsid'] = asol['obsid'][-1]
 
     for date, jump in AIMPOINT_JUMPS.items():
-        # Make the mean of the "before" interval match the mean of the "after" interval.
-        i0 = np.searchsorted(asol['time'], Time(date).cxcsec)
-        asol['dy'][:i0] -= jump['d_dy'] / 20.0
-        asol['dz'][:i0] -= jump['d_dz'] / 20.0
-        # Capture info about jump
-        info.setdefault('aimpoint_jumps', {})[date] = jump
-        logger.info('Applying aimpoint jump of {} at {}'.format(jump, date))
+        jump_date = Time(date)
+        if jump_date < stop:
+            # Make the mean of the "before" interval match the mean of the "after" interval.
+            i0 = np.searchsorted(asol['time'], jump_date.cxcsec)
+            asol['dy'][:i0] -= jump['d_dy'] / 20.0
+            asol['dz'][:i0] -= jump['d_dz'] / 20.0
+            # Capture info about jump
+            info.setdefault('aimpoint_jumps', {})[date] = jump
+            logger.info('Applying aimpoint jump of {} at {}'.format(jump, date))
 
     return asol
 
