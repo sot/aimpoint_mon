@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import division
+
 import json
 import re
 import os
@@ -9,8 +11,9 @@ from itertools import izip
 import numpy as np
 from astropy.table import Table, Column
 from astropy.time import Time
-import astropy.units as u
+
 from Ska.engarchive import fetch_eng as fetch
+from kadi import events
 import tables
 import pyyaks.logger
 import matplotlib
@@ -32,22 +35,30 @@ POG = {'ACIS-I': (930.2, 1009.6),
        'ACIS-S': (200.7, 476.9),
        'year': 2015.4}
 
-# Aimpoint jumps as seen and defined in aimpoint_jumps.ipynb.
-# The jump is defined as (mean value before) - (mean value after)
-# in arcsec.
-AIMPOINT_JUMPS = {'2015:265': {'d_dy': round(17.5 - 11.6, 1),
-                               'd_dz': round(17.8 - 17.0, 1)}}
+# Aimpoint jumps as seen and defined in fit_aimpoint_drift.ipynb.
+AIMPOINT_JUMPS = {'2015:006': {'d_dy': 4.4, 'd_dz': 1.9},
+                  '2015:265': {'d_dy': 4.8, 'd_dz': 0.5},
+                  '2016:064': {'d_dy': 2.0, 'd_dz': 1.0}
+                  }
 
 acis_arcsec_per_pix = 0.492
-BOX_DURATION = 0.5 * u.yr
 
 
 def get_opt(args=None):
     parser = argparse.ArgumentParser(description='Plot aimpoint drift data '
                                      'from aspect solution files')
+    parser.add_argument("--start",
+                        default='2000:001',
+                        help="Processing start date (default=2000:001)")
+    parser.add_argument("--stop",
+                        default=Time.now().iso,
+                        help="Processing stop date (default=NOW)")
     parser.add_argument("--data-root",
                         default=".",
                         help="Root directory for asol and index files")
+    parser.add_argument("--box-duration",
+                        default=3,
+                        help="Duration before --stop over which to find aimpoint min/max (months)")
 
     return parser.parse_args(args)
 
@@ -60,6 +71,9 @@ def get_asol(info=None):
     :param info: dict of processing information and outputs
     :returns: aspect solution data (Table)
     """
+    start = Time(opt.start)
+    stop = Time(opt.stop)
+
     h5_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
     logger.info('Reading asol file {}'.format(h5_file))
     h5 = tables.openFile(h5_file)
@@ -74,15 +88,32 @@ def get_asol(info=None):
 
     asol.sort('time')
 
+    # Include only points between --start and --stop
+    i0, i1 = np.searchsorted(asol['time'], [start.cxcsec, stop.cxcsec])
+    asol = asol[i0:i1]
+
+    # Exclude from 10ksec before to 3 days after any normal sun or safe sun intervals.
+    normal_suns = events.normal_suns()
+    safe_suns = events.safe_suns()
+    normal_suns.interval_pad = 10000, 86400 * 3
+    safe_suns.interval_pad = 10000, 86400 * 3
+    exclude_intervals = (normal_suns | safe_suns).intervals(asol['time'][0], asol['time'][-1])
+    ok = np.ones(len(asol), dtype=np.bool)
+    for date0, date1 in exclude_intervals:
+        logger.info('Excluding asol values from {} to {} (normal/safe sun)'.format(date0, date1))
+        i0, i1 = np.searchsorted(asol['time'], Time([date0, date1], format='yday').cxcsec)
+        ok[i0:i1] = False
+    asol = asol[ok]
+
     if info is not None:
         info['last_ctime'] = Time(asol['time'][-1], format='cxcsec').datetime.ctime()
         info['last_obsid'] = asol['obsid'][-1]
 
-    now = Time.now()
     for date, jump in AIMPOINT_JUMPS.items():
-        if now - Time(date) < BOX_DURATION:
+        jump_date = Time(date)
+        if jump_date < stop:
             # Make the mean of the "before" interval match the mean of the "after" interval.
-            i0 = np.searchsorted(asol['time'], Time(date).cxcsec)
+            i0 = np.searchsorted(asol['time'], jump_date.cxcsec)
             asol['dy'][:i0] -= jump['d_dy'] / 20.0
             asol['dz'][:i0] -= jump['d_dz'] / 20.0
             # Capture info about jump
@@ -93,6 +124,17 @@ def get_asol(info=None):
 
 
 class AsolBinnedStats(object):
+    """
+    Collect binned statistics from a table of aspect solution offsets.
+
+    This class makes it easy to bin aspect solution dy, dz offsets in
+    intervals and then get the percentile values within those bins.
+
+    :param asol: structured ASOL array from update_aimpoint_data.py
+    :param bin_days: bin size in days
+    :param n_years: use the most recent n_years of data
+    """
+
     def __init__(self, asol, bin_days, n_years=None):
         if n_years is not None:
             iok = np.searchsorted(asol['year'], asol['year'][-1] - n_years)
@@ -136,6 +178,11 @@ class AsolBinnedStats(object):
         return self._argsort
 
     def __getattr__(self, attr):
+        """
+        If the requested ``attr`` is of the form "p<percentile>_<colname>" for
+        an asol column, then compute and return the corresponding percentile
+        value for that colname in the grouped asol data structure.
+        """
         m = re.match(r'p(\d+)_(\S+)', attr)
         if m:
             perc, col = m.groups()
@@ -164,44 +211,6 @@ class AsolBinnedStats(object):
         chipy = cy0 + cyy * asol['dy'] + cyz * asol['dz']
 
         return chipx, chipy
-
-    def plot_chip_year_bokeh(self):
-        import bokeh.plotting as bp
-
-        det = self.det
-
-        bp.output_file('chip_year_{}.html'.format(self.det_title),
-                       title='{} CHIP vs year'.format(det))
-        TOOLS = 'pan,wheel_zoom,box_zoom,crosshair,reset'
-
-        ax1 = bp.figure(tools=TOOLS, toolbar_location='left',
-                        plot_width=800, height=300,
-                        title='{} aimpoint position (CCD {})'.format(det, self.ccd),
-                        y_axis_label='CHIPX')
-        ax2 = bp.figure(tools=TOOLS, width=800, height=300,
-                        x_range=ax1.x_range,
-                        x_axis_label='Year',
-                        y_axis_label='CHIPY')
-
-        for ax, xy in izip((ax1, ax2), ('x', 'y')):
-            ax.quad(left=self.min['year'],
-                    right=self.max['year'],
-                    bottom=self.min[self.chip_col + xy],
-                    top=self.max[self.chip_col + xy],
-                    fill_color='red', fill_alpha=0.5,
-                    line_color='black')
-
-            ax.quad(left=self.min['year'],
-                    right=self.max['year'],
-                    bottom=self.p10[self.chip_col + xy],
-                    top=self.p90[self.chip_col + xy],
-                    fill_color='blue', fill_alpha=0.5,
-                    line_color=None)
-
-        # Put the subplots in a gridplot
-        p = bp.gridplot([[ax1],
-                         [ax2]])
-        bp.save(p)
 
     def plot_intra_obs_dy_dz(self):
         # Make a table with the max delta chipx and chipy during each obsid.
@@ -265,15 +274,61 @@ class AsolBinnedStats(object):
         fig.patch.set_visible(False)
         plt.savefig(outroot + '.png', frameon=False)
 
-    def plot_chip_x_y(self, det=None, info=None):
-        if det:
-            self.det = det
+    def get_chip_x_y_info(self):
+        """
+        Get information about CHIPX and CHIPY for this detector.
 
-        def concat(colname):
-            out = [getattr(self, prop)[colname]
-                   for prop in ('mean', 'min', 'max')]
-            return np.concatenate(out)
+        :param det: detector
+        :returns: dict of info
+        """
+        # Make the N-month bounding box
+        asol = self.asol
+        iok = np.searchsorted(asol['year'], asol['year'][-1] - float(opt.box_duration) / 12)
+        asol = self.asol[iok:]
+        x0, x1 = np.min(asol[self.chipx_col]), np.max(asol[self.chipx_col])
+        y0, y1 = np.min(asol[self.chipy_col]), np.max(asol[self.chipy_col])
+        ix0, ix1 = np.argmin(asol[self.chipx_col]), np.argmax(asol[self.chipx_col])
+        iy0, iy1 = np.argmin(asol[self.chipy_col]), np.argmax(asol[self.chipy_col])
+        pogx = POG[self.det][0]
+        pogy = POG[self.det][1]
 
+        # Store some information for the web page
+        info_det = {}
+        info_det['pogx'] = pogx
+        info_det['pogy'] = pogy
+        info_det['chipx'] = {}
+        info_det['chipx']['min'] = x0
+        info_det['chipx']['mid'] = xmid = (x0 + x1) / 2
+        info_det['chipx']['max'] = x1
+        info_det['chipx']['date_min'] = Time(asol['time'][ix0], format='cxcsec').yday
+        info_det['chipx']['date_max'] = Time(asol['time'][ix1], format='cxcsec').yday
+        info_det['chipy'] = {}
+        info_det['chipy']['min'] = y0
+        info_det['chipy']['mid'] = ymid = (y0 + y1) / 2
+        info_det['chipy']['max'] = y1
+        info_det['chipy']['date_min'] = Time(asol['time'][iy0], format='cxcsec').yday
+        info_det['chipy']['date_max'] = Time(asol['time'][iy1], format='cxcsec').yday
+        if self.det_title == 'aciss':
+            info_det['dDY'] = -(pogx - xmid) * acis_arcsec_per_pix
+            info_det['dDZ'] = -(pogy - ymid) * acis_arcsec_per_pix
+        else:
+            info_det['dDY'] = (pogy - ymid) * acis_arcsec_per_pix
+            info_det['dDZ'] = -(pogx - xmid) * acis_arcsec_per_pix
+        for dd in ('dDY', 'dDZ'):
+            info_det[dd + '_arcmin'] = info_det[dd] / 60.
+
+        return info_det
+
+    def plot_chip_x_y(self, info_det):
+        """
+        Make 3-panel plot showing CHIPX vs. CHIPY, CHIPX vs. time, CHIPY vs. time.
+
+        :param det: detector
+        :param info_det: dict of relevant information for plot
+
+        :returns: None
+        """
+        # Gather plot data from percentile tables
         years = []
         chipxs = []
         chipys = []
@@ -288,6 +343,7 @@ class AsolBinnedStats(object):
         chipx = np.concatenate(chipxs)
         chipy = np.concatenate(chipys)
 
+        # Open three plot axes for CHIPX vs CHIPY, CHIPX vs time and CHIPY vs Time
         plt.close(1)
         fig = plt.figure(1, figsize=(10, 5))
         ax1 = plt.subplot2grid((2, 4), (0, 0), colspan=2, rowspan=2)
@@ -296,47 +352,27 @@ class AsolBinnedStats(object):
 
         cm = matplotlib.cm.get_cmap('YlOrRd')
 
-        # Make the 6-month bounding box
+        # Make the N-month bounding box
         asol = self.asol
-        iok = np.searchsorted(asol['year'], asol['year'][-1] - BOX_DURATION.to(u.yr).value)
+        iok = np.searchsorted(asol['year'], asol['year'][-1] - float(opt.box_duration) / 12)
         asol = self.asol[iok:]
-        x0, x1 = np.min(asol[self.chipx_col]), np.max(asol[self.chipx_col])
-        y0, y1 = np.min(asol[self.chipy_col]), np.max(asol[self.chipy_col])
-        ix0, ix1 = np.argmin(asol[self.chipx_col]), np.argmax(asol[self.chipx_col])
-        iy0, iy1 = np.argmin(asol[self.chipy_col]), np.argmax(asol[self.chipy_col])
+        x0, x1 = info_det['chipx']['min'], info_det['chipx']['max']
+        y0, y1 = info_det['chipy']['min'], info_det['chipy']['max']
         dx = x1 - x0
         dy = y1 - y0
+        year0 = asol['year'][0]
+        dyear = asol['year'][-1] - year0
         ax1.add_patch(Rectangle((x0, y0), dx, dy,
+                                facecolor='#fff8f8', edgecolor='k',
+                                zorder=-100))
+        ax2.add_patch(Rectangle((year0, x0), dyear, dx,
+                                facecolor='#fff8f8', edgecolor='k',
+                                zorder=-100))
+        ax3.add_patch(Rectangle((year0, y0), dyear, dy,
                                 facecolor='#fff8f8', edgecolor='k',
                                 zorder=-100))
         pogx = POG[self.det][0]
         pogy = POG[self.det][1]
-
-        # Store some information for the web page
-        if info is not None:
-            info_det = info[self.det_title] = {}
-            info_det['pogx'] = pogx
-            info_det['pogy'] = pogy
-            info_det['chipx'] = {}
-            info_det['chipx']['min'] = x0
-            info_det['chipx']['mid'] = xmid = (x0 + x1) / 2
-            info_det['chipx']['max'] = x1
-            info_det['chipx']['date_min'] = Time(asol['time'][ix0], format='cxcsec').yday
-            info_det['chipx']['date_max'] = Time(asol['time'][ix1], format='cxcsec').yday
-            info_det['chipy'] = {}
-            info_det['chipy']['min'] = y0
-            info_det['chipy']['mid'] = ymid = (y0 + y1) / 2
-            info_det['chipy']['max'] = y1
-            info_det['chipy']['date_min'] = Time(asol['time'][iy0], format='cxcsec').yday
-            info_det['chipy']['date_max'] = Time(asol['time'][iy1], format='cxcsec').yday
-            if det == 'ACIS-S':
-                info_det['dDY'] = -(pogx - xmid) * acis_arcsec_per_pix
-                info_det['dDZ'] = -(pogy - ymid) * acis_arcsec_per_pix
-            else:
-                info_det['dDY'] = (pogy - ymid) * acis_arcsec_per_pix
-                info_det['dDZ'] = -(pogx - xmid) * acis_arcsec_per_pix
-            for dd in ('dDY', 'dDZ'):
-                info_det[dd + '_arcmin'] = info_det[dd] / 60.
 
         ax1.plot([pogx], [pogy], '*r', ms=15, zorder=100)
         ax2.plot([POG['year']], [pogx], '*r', ms=15, zorder=100)
@@ -346,7 +382,7 @@ class AsolBinnedStats(object):
         points = ax1.scatter(chipx, chipy, **plot_opt)
         ax1.set_xlabel('CHIPX')
         ax1.set_ylabel('CHIPY')
-        ax1.set_title('{} aimpoint position (CCD {})'.format(det, self.ccd))
+        ax1.set_title('{} aimpoint position (CCD {})'.format(self.det, self.ccd))
         ax1.set_aspect('equal', 'datalim')
         ax1.grid()
 
@@ -370,52 +406,6 @@ class AsolBinnedStats(object):
         mpld3.save_html(fig, outroot + '.html')
         fig.patch.set_visible(False)
         plt.savefig(outroot + '.png', frameon=False)
-
-    def plot_chip_x_y_bokeh(self):
-        import bokeh.plotting as bp
-        from bokeh.models import ColumnDataSource
-        det = self.det
-
-        bp.output_file('chip_x_y_{}.html'.format(self.det_title),
-                       title='CHIP vs year for {}'.format(det))
-        TOOLS = 'pan,wheel_zoom,box_zoom,box_select,crosshair,reset'
-
-        year = self.mean['year']
-        chipx = self.mean[self.chipx_col]
-        chipy = self.mean[self.chipy_col]
-
-        source = ColumnDataSource(data=dict(year=year, chipx=chipx, chipy=chipy))
-
-        width = 500
-        ratio = 1.8
-        size = 4  # pixels
-
-        ax1 = bp.figure(tools=TOOLS, toolbar_location='left',
-                        width=width, height=width,
-                        title='{} aimpoint position (CCD {})'.format(det, self.ccd),
-                        x_axis_label='CHIPX',
-                        y_axis_label='CHIPY')
-        ax2 = bp.figure(tools=TOOLS, width=width, height=np.int(width // ratio),
-                        x_axis_label='Year',
-                        y_axis_label='CHIPX')
-        ax3 = bp.figure(tools=TOOLS, width=width, height=np.int(width // ratio),
-                        x_axis_label='Year',
-                        y_axis_label='CHIPY')
-
-        ax1.circle('chipx', 'chipy', source=source,
-                   size=size)
-
-        ax2.circle('year', 'chipx', source=source,
-                   size=size)
-
-        ax3.circle('year', 'chipy', source=source,
-                   size=size)
-
-        # Put the subplots in a gridplot
-        pv = bp.gridplot([[ax2],
-                          [ax3]])
-        p = bp.gridplot([[ax1], pv])
-        bp.save(p)
 
 
 def plot_housing_temperature():
@@ -455,13 +445,20 @@ def make_pure_python(obj):
 def main():
     global opt
     opt = get_opt()
-    info = {'date': Time.now().iso}
+    info = {'date': opt.stop,
+            'start': opt.start,
+            'stop': opt.stop,
+            'box_duration_months': opt.box_duration}
 
     asol_aimpoint = get_asol(info)
 
     asol_monthly = AsolBinnedStats(asol_aimpoint, 365.25 / 12)
-    asol_monthly.plot_chip_x_y(det='ACIS-S', info=info)
-    asol_monthly.plot_chip_x_y(det='ACIS-I', info=info)
+    for det in ('ACIS-S', 'ACIS-I'):
+        asol_monthly.det = det
+        det_title = asol_monthly.det_title
+        info[det_title] = asol_monthly.get_chip_x_y_info()
+        asol_monthly.plot_chip_x_y(info[det_title])
+
     asol_monthly.plot_intra_obs_dy_dz()
 
     plot_housing_temperature()
