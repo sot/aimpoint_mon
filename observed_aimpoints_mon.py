@@ -13,6 +13,13 @@ from kadi import events
 from Chandra.Time import DateTime
 import pyyaks.logger
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import mpld3
+from Ska.Matplotlib import plot_cxctime
+
+
 MP_ROOT = '/data/mpcrit1/mplogs'
 OBSERVED_AIMPOINTS_FILE = 'observed_aimpoints.dat'
 
@@ -63,6 +70,9 @@ def get_opt(args=None):
     parser.add_argument("--data-root",
                         default=".",
                         help="Root directory for data files (default='.')")
+    parser.add_argument("--lookback",
+                        default=180,
+                        help="Lookback time for plotting (days, default=180)")
     return parser.parse_args(args)
 
 
@@ -179,7 +189,7 @@ def get_observed_aimpoint_offset(obsid):
     # In cycle 18 POG figures 4.26 - 29.
     #
     # SIM_Z:
-    # -offset_z + arcsec_per_mm / arcsec_per_pixel * (sim_z_nom - evt['sim_z'])
+    # -offset_z + arcsec_per_mm * (sim_z_nom - evt['sim_z'])
     #
     # ACIS-S : -offset_y <=> SIM +Y <=> +chip_x, -offset_z <=> SIM +Z <=> +chip_y
     # ACIS-I : -offset_y <=> SIM +Y <=> -chip_y, -offset_z <=> SIM +Z <=> +chip_x
@@ -282,12 +292,47 @@ def update_observed_aimpoints():
 
         dat.sort('mean_date')
         dat.write(filename, format='ascii.ecsv')
+    else:
+        dat = dat_old
+
+    return dat
+
+
+def plot_observed_aimpoints(obs_aimpoints):
+    plt.close(1)
+    fig = plt.figure(1, figsize=(8, 4))
+
+    dates = DateTime(obs_aimpoints['mean_date'])
+    years = dates.frac_year
+    times = dates.secs
+    ok = years > np.max(years) - opt.lookback / 365.25
+    obs_aimpoints = obs_aimpoints[ok]
+    times = times[ok]
+
+    plot_cxctime(times, obs_aimpoints['dx'], 'ob', label='CHIPX')
+    plot_cxctime(times, obs_aimpoints['dy'], 'or', label='CHIPY')
+    plt.grid()
+    ymax = max(5, np.max(np.abs(obs_aimpoints['dx'])), np.max(np.abs(obs_aimpoints['dy'])))
+    plt.ylim(-ymax, ymax)
+    plt.ylabel('Offset (arcsec)')
+    plt.title('Observed aimpoint offsets')
+
+    plt.legend(loc='upper left', fontsize='small', title='')
+
+    outroot = os.path.join(opt.data_root, 'observed_aimpoints')
+    logger.info('Writing plot files {}.png,html'.format(outroot))
+    mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
+    mpld3.save_html(fig, outroot + '.html')
+    fig.patch.set_visible(False)
+    plt.savefig(outroot + '.png', frameon=False)
 
 
 def main():
     global opt
     opt = get_opt()
-    update_observed_aimpoints()
+
+    obs_aimpoints = update_observed_aimpoints()
+    plot_observed_aimpoints(obs_aimpoints)
 
 
 if __name__ == '__main__':
