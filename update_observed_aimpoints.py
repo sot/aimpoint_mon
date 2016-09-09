@@ -126,9 +126,6 @@ def dmcoords_chipx_chipy(keys, verbose=False):
 
     :param keys: dict of event file keywords
     """
-    # See the absolute_pointing_uncertainty notebook in this repo for the
-    # detailed derivation of this -15.5, 6.0 arcsec offset factor.  See the
-    # cell below for the summary version.
     ciaorun('punlearn dmcoords')
     fpsys_map = {'HRC-I': 'HI1',
                  'HRC-S': 'HS2',
