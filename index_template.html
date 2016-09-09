@@ -9,7 +9,6 @@
 
 <!--#include virtual="/mta/ASPECT/header.html"-->
 
-
 <h2> Chandra Aimpoint Trending {%if static%}(static version){%endif%}</h2>
 
 <p>The observation aimpoint is defined as the position on the focal plane where an on-axis
@@ -83,6 +82,38 @@ has evolved then return to the <a href="index.html">dynamic version</a>.
 </ul>
 
 {% endif %}
+
+
+<h3> Observed aimpoint differences trend </h3>
+
+The following plot shows the difference in CHIPX and CHIPY between the planned observation
+aimpoint and the actual aimpoint.  The planned aimpoint is computed using the planned
+aimpoint chip coordinates (CHIPX/Y) and observer target offsets and the SIM-Z position.
+The actual aimpoint is computed using <tt>dmcoords</tt> and keyword values from the CXC
+archive L2 X-ray event file.  The plot shows up to 6 months of data starting from when
+dynamic aimpoints were initially put into use (AUG2916 schedule).
+
+{% if static %}
+<img src="observed_aimpoints.png">
+{% else %}
+<!--#include virtual="observed_aimpoints.html"-->
+{% endif %}
+
+<h3> Intra-observation aimpoint drift </h3>
+
+During an observation the aimpoint can drift, and this is illustrated in the plot below.
+However, from the perspective of planning observations this need not be
+considered because it is <em>already included</em> in the <a href="#aimpoint-trending">Aimpoint
+  Trending</a> plots.  This is because those plots sample from 1 ksec intervals within
+every science observation (instead of per-observation means), thus picking up the extremes.
+
+
+{% if static %}
+<img src="intra_obs_dy_dz.png">
+{% else %}
+<!--#include virtual="intra_obs_dy_dz.html"-->
+{% endif %}
+
 
 <h3 id="aimpoint-trending"> Aimpoint trending (current through obsid={{last_obsid}} on {{last_ctime}})</h3>
 
@@ -187,21 +218,6 @@ offsets DY and DZ:<br/><br/>
 <img src="chip_x_y_acisi.png">
 {% else %}
 <!--#include virtual="chip_x_y_acisi.html"-->
-{% endif %}
-
-<h3> Intra-observation aimpoint drift </h3>
-
-During an observation the aimpoint can drift, and this is illustrated in the plot below.
-However, from the perspective of planning observations this need not be
-considered because it is <em>already included</em> in the <a href="#aimpoint-trending">Aimpoint
-  Trending</a> plots.  This is because those plots sample from 1 ksec intervals within
-every science observation (instead of per-observation means), thus picking up the extremes.
-
-
-{% if static %}
-<img src="intra_obs_dy_dz.png">
-{% else %}
-<!--#include virtual="intra_obs_dy_dz.html"-->
 {% endif %}
 
 <h3 id="details"> Details</h3>
