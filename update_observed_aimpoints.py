@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Trending application to update the ``OBSERVED_AIMPOINTS_FILE`` table (ascii ECSV format)
 in place to reflect information about observed aimpoints, and in particular the delta
