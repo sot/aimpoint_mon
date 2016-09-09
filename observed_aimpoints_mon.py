@@ -1,3 +1,9 @@
+"""
+Trending application to update the ``OBSERVED_AIMPOINTS_FILE`` table (ascii ECSV format)
+in place to reflect information about observed aimpoints, and in particular the delta
+offset from the planned value.  This also makes a plot (default 6-months of data) for
+inspection.
+"""
 import os
 import glob
 import functools
@@ -246,12 +252,20 @@ def get_observed_aimpoint_offset(obsid):
 
 
 def update_observed_aimpoints():
+    """
+    Update the ``OBSERVED_AIMPOINTS_FILE`` table (ascii ECSV format) in
+    place to reflect information about observed aimpoints, and in particular
+    the delta offset from the planned value.
+    """
+    # Default is between NOW and NOW - 14 days
     start = DateTime(opt.start) - (14 if opt.start is None else 0)
     stop = DateTime(opt.stop)
 
+    # Get science obsids
     obsids = [evt.obsid for evt in events.obsids.filter(start, stop)
               if evt.obsid < 40000]
 
+    # Read in existing file if it exists and make a set of already-processed obsids
     filename = os.path.join(opt.data_root, OBSERVED_AIMPOINTS_FILE)
     if os.path.exists(filename):
         logger.info('Reading {}'.format(filename))
@@ -299,6 +313,9 @@ def update_observed_aimpoints():
 
 
 def plot_observed_aimpoints(obs_aimpoints):
+    """
+    Make png and html (mpld3) plot of data in the ``obs_aimpoints`` table.
+    """
     plt.close(1)
     fig = plt.figure(1, figsize=(8, 4))
 
