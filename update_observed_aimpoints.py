@@ -11,6 +11,7 @@ import glob
 import functools
 import shelve
 import argparse
+import warnings
 
 import numpy as np
 from astropy.table import Table, vstack
@@ -105,7 +106,9 @@ def get_evt_meta(obsid, detector):
         if len(files) > 1:
             raise TooManyFilesError('Wrong number of files {}'.format(files))
 
-        evt2 = Table.read(files[0], hdu=1)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            evt2 = Table.read(files[0], hdu=1)
         os.unlink(files[0])
 
         evts[sobsid] = {k.lower(): v for k, v in evt2.meta.items()}
