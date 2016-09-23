@@ -227,9 +227,8 @@ def get_observed_aimpoint_offset(obsid):
         delta_y = +offset_y
 
     elif detector == 'HRC-I':
-        # What are the odds this is right?
         delta_x = (-offset_y + offset_z + sim_z_off) / np.sqrt(2)
-        delta_y = (-offset_y - offset_z - sim_z_off) / np.sqrt(2)
+        delta_y = (+offset_y + offset_z - sim_z_off) / np.sqrt(2)
 
     else:
         raise ValueError('illegal detector {}'.format(detector))
@@ -324,19 +323,24 @@ def plot_observed_aimpoints(obs_aimpoints):
     dates = DateTime(obs_aimpoints['mean_date'])
     years = dates.frac_year
     times = dates.secs
-    ok = years > np.max(years) - opt.lookback / 365.25
+    ok = years > np.max(years) - float(opt.lookback) / 365.25
     obs_aimpoints = obs_aimpoints[ok]
     times = times[ok]
 
-    plot_cxctime(times, obs_aimpoints['dx'], 'ob', label='CHIPX')
-    plot_cxctime(times, obs_aimpoints['dy'], 'or', label='CHIPY')
+    ok = ((np.abs(obs_aimpoints['target_offset_y']) < 100) &
+          (np.abs(obs_aimpoints['target_offset_z']) < 100))
+    plot_cxctime(times[ok], obs_aimpoints['dx'][ok], 'ob', label='CHIPX')
+    plot_cxctime(times[ok], obs_aimpoints['dy'][ok], 'or', label='CHIPY')
+    plot_cxctime(times[~ok], obs_aimpoints['dx'][~ok], '*b', label='CHIPX (offset > 100")')
+    plot_cxctime(times[~ok], obs_aimpoints['dy'][~ok], '*r', label='CHIPY (offset > 100")')
+
     plt.grid()
     ymax = max(5, np.max(np.abs(obs_aimpoints['dx'])), np.max(np.abs(obs_aimpoints['dy'])))
     plt.ylim(-ymax, ymax)
     plt.ylabel('Offset (arcsec)')
     plt.title('Observed aimpoint offsets')
 
-    plt.legend(loc='upper left', fontsize='small', title='')
+    plt.legend(loc='upper left', fontsize='small', title='', framealpha=0.5)
 
     outroot = os.path.join(opt.data_root, 'observed_aimpoints')
     logger.info('Writing plot files {}.png,html'.format(outroot))
@@ -352,7 +356,8 @@ def main():
 
     obs_aimpoints = update_observed_aimpoints()
     plot_observed_aimpoints(obs_aimpoints)
-
+    obs_aimpoints.write(os.path.join(opt.data_root, 'observed_aimpoints_table.html'),
+                        format='ascii.html')
 
 if __name__ == '__main__':
     main()
