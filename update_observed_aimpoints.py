@@ -292,8 +292,11 @@ def update_observed_aimpoints():
             continue
 
         logger.info('Obsid={obsid:5d} detector={detector:6s} '
-                    'chipx={chipx:.1f} chipy={chipy:.1f} dr={dr:.1f}'
+                    'chipx={chipx:.1f} chipy={chipy:.1f} dx={dx:.1f} dy={dy:.1f} dr={dr:.1f}'
                     .format(**vals))
+        if abs(vals['dx']) > 10 or abs(vals['dy']) > 10:
+            logger.warn('WARNING: large dx or dy')
+
         rows.append(vals)
 
     if rows:
@@ -327,6 +330,13 @@ def plot_observed_aimpoints(obs_aimpoints):
     obs_aimpoints = obs_aimpoints[ok]
     times = times[ok]
 
+    lolims = {}
+    uplims = {}
+    for axis in ('dx', 'dy'):
+        lolims[axis] = obs_aimpoints[axis] > 10
+        uplims[axis] = obs_aimpoints[axis] < -10
+        obs_aimpoints[axis] = obs_aimpoints[axis].clip(-10, 10)
+
     ok = ((np.abs(obs_aimpoints['target_offset_y']) < 100) &
           (np.abs(obs_aimpoints['target_offset_z']) < 100))
     plot_cxctime(times[ok], obs_aimpoints['dx'][ok], 'ob', label='CHIPX')
@@ -334,8 +344,16 @@ def plot_observed_aimpoints(obs_aimpoints):
     plot_cxctime(times[~ok], obs_aimpoints['dx'][~ok], '*b', label='CHIPX (offset > 100")')
     plot_cxctime(times[~ok], obs_aimpoints['dy'][~ok], '*r', label='CHIPY (offset > 100")')
 
+    for axis in ('dx', 'dy'):
+        if np.any(lolims[axis]):
+            plt.errorbar(DateTime(times[lolims[axis]]).plotdate,
+                         obs_aimpoints[axis][lolims[axis]], yerr=1.5, lolims=True)
+        if np.any(uplims[axis]):
+            plt.errorbar(DateTime(times[uplims[axis]]).plotdate,
+                         obs_aimpoints[axis][uplims[axis]], yerr=1.5, uplims=True)
+
     plt.grid()
-    ymax = max(5, np.max(np.abs(obs_aimpoints['dx'])), np.max(np.abs(obs_aimpoints['dy'])))
+    ymax = max(12, np.max(np.abs(obs_aimpoints['dx'])), np.max(np.abs(obs_aimpoints['dy'])))
     plt.ylim(-ymax, ymax)
     plt.ylabel('Offset (arcsec)')
     plt.title('Observed aimpoint offsets')
