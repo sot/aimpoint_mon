@@ -111,12 +111,15 @@ def get_evt_meta(obsid, detector):
             evt2 = Table.read(files[0], hdu=1)
         os.unlink(files[0])
 
-        evts[sobsid] = {k.lower(): v for k, v in evt2.meta.items()}
+        evt = {k.lower(): v for k, v in evt2.meta.items()}
+        evt['obs_chipx'], evt['obs_chipy'], evt['obs_chip_id'] = dmcoords_chipx_chipy(evt)
+        evts[sobsid] = evt
+    else:
+        evt = evts[sobsid]
 
-    out = evts[sobsid]
     evts.close()
 
-    return out
+    return evt
 
 
 def dmcoords_chipx_chipy(keys, verbose=False):
@@ -183,8 +186,6 @@ def get_observed_aimpoint_offset(obsid):
 
     evt = get_evt_meta(obsid, detector)
 
-    obs_chipx, obs_chipy, obs_chip_id = dmcoords_chipx_chipy(evt)
-
     arcsec_per_pixel = 0.13175 if detector.startswith('HRC') else 0.492
     arcsec_per_mm = 20.49  # arcsec/radian / focal length (mm)
 
@@ -227,7 +228,7 @@ def get_observed_aimpoint_offset(obsid):
         delta_y = +offset_y
 
     elif detector == 'HRC-I':
-        delta_x = (-offset_y + offset_z + sim_z_off) / np.sqrt(2)
+        delta_x = (-offset_y + offset_z - sim_z_off) / np.sqrt(2)
         delta_y = (+offset_y + offset_z - sim_z_off) / np.sqrt(2)
 
     else:
@@ -236,14 +237,16 @@ def get_observed_aimpoint_offset(obsid):
     plan_chipx += delta_x / arcsec_per_pixel
     plan_chipy += delta_y / arcsec_per_pixel
 
-    dx = (plan_chipx - obs_chipx) * arcsec_per_pixel
-    dy = (plan_chipy - obs_chipy) * arcsec_per_pixel
+    dx = (plan_chipx - evt['obs_chipx']) * arcsec_per_pixel
+    dy = (plan_chipy - evt['obs_chipy']) * arcsec_per_pixel
 
     out = {'dx': dx,
            'dy': dy,
            'dr': np.hypot(dx, dy),
-           'obs_chipx': obs_chipx,
-           'obs_chipy': obs_chipy
+           'obs_chipx': evt['obs_chipx'],
+           'obs_chipy': evt['obs_chipy'],
+           'sim_z_off': sim_z_off,
+           'sim_z': evt['sim_z'],
            }
 
     for colname in plan.colnames:
@@ -305,7 +308,7 @@ def update_observed_aimpoints():
             dat = vstack([dat_old, dat])
         logger.info('Writing {}'.format(filename))
 
-        for name in 'dr dx dy obs_chipx obs_chipy'.split():
+        for name in 'dr dx dy obs_chipx obs_chipy sim_z_off'.split():
             dat[name].format = '.2f'
 
         dat.sort('mean_date')
@@ -347,10 +350,10 @@ def plot_observed_aimpoints(obs_aimpoints):
     for axis in ('dx', 'dy'):
         if np.any(lolims[axis]):
             plt.errorbar(DateTime(times[lolims[axis]]).plotdate,
-                         obs_aimpoints[axis][lolims[axis]], yerr=1.5, lolims=True)
+                         obs_aimpoints[axis][lolims[axis]], marker='.', yerr=1.5, lolims=True)
         if np.any(uplims[axis]):
             plt.errorbar(DateTime(times[uplims[axis]]).plotdate,
-                         obs_aimpoints[axis][uplims[axis]], yerr=1.5, uplims=True)
+                         obs_aimpoints[axis][uplims[axis]], marker='.', yerr=1.5, uplims=True)
 
     plt.grid()
     ymax = max(12, np.max(np.abs(obs_aimpoints['dx'])), np.max(np.abs(obs_aimpoints['dy'])))
