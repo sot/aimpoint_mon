@@ -147,6 +147,24 @@ def dmcoords_chipx_chipy(keys, verbose=False):
         print(cmd)
     return [float(x) for x in ciaorun('pget dmcoords chipx chipy chip_id')]
 
+CACHE = {}
+def get_default_zero_offset_table():
+    """
+    Get official SOT MP zero offset aimpoint table:
+    :returns: zero offset aimpoint table as astropy.Table
+    """
+    if 'ZERO_OFFSET_TABLE' in CACHE:
+        return CACHE['ZERO_OFFSET_TABLE']
+    try:
+        CACHE['ZERO_OFFSET_TABLE'] = Table.read(
+            '/data/mpcrit1/aimpoint_table/zero_offset_aimpoints.txt',
+            format='ascii')
+    except:
+        CACHE['ZERO_OFFSET_TABLE'] = Table.read(
+            "https://icxc.harvard.edu/mp/html/aimpoint_table/zero_offset_aimpoints.txt",
+            format='ascii')
+    return CACHE['ZERO_OFFSET_TABLE']
+
 
 def get_mp_aimpoint_entry(obsid):
     """
@@ -163,7 +181,20 @@ def get_mp_aimpoint_entry(obsid):
 
     files = glob.glob(os.path.join(mp_dir, 'output', '*_dynamical_offsets.txt'))
     if len(files) != 1:
-        raise ValueError('found {} dynamical offsets files in {}'.format(len(files), mp_dir))
+        from Ska.DBI import DBI
+        with DBI(dbi='sybase', server='sqlsao', user='aca_ops', database='axafocat') as db:
+            targ = db.fetchone("select * from target where obsid = {}".format(obsid))
+        zot = get_default_zero_offset_table()
+        aimpoint = zot[(zot['detector'] == targ['instrument']) & (zot['cycle_effective'] == 17)][0]
+        return Table([{
+                    'obsid': obsid,
+                    'detector': targ['instrument'],
+                    'chipx': aimpoint['chipx'],
+                    'chipy': aimpoint['chipy'],
+                    'chip_id': aimpoint['chip_id'],
+                    'target_offset_y': targ['y_det_offset'] * 60,
+                    'target_offset_z': targ['z_det_offset'] * 60,
+                    'mean_date': run_date}])[0]
 
     aimpoints = Table.read(files[0], format='ascii.basic', guess=False)
     idxs = np.flatnonzero(aimpoints['obsid'] == obsid)
@@ -243,10 +274,11 @@ def get_observed_aimpoint_offset(obsid):
            'dy': dy,
            'dr': np.hypot(dx, dy),
            'obs_chipx': obs_chipx,
-           'obs_chipy': obs_chipy
+           'obs_chipy': obs_chipy,
+           'obs_chip_id': obs_chip_id,
            }
 
-    for colname in plan.colnames:
+    for colname in ['chipx', 'chipy', 'chip_id', 'detector', 'obsid', 'target_offset_y', 'target_offset_z', 'mean_date']:
         out[colname] = plan[colname]
 
     return out
