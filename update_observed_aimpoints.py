@@ -323,8 +323,6 @@ def plot_observed_aimpoints(obs_aimpoints):
     """
     Make png and html (mpld3) plot of data in the ``obs_aimpoints`` table.
     """
-    plt.close(1)
-    fig = plt.figure(1, figsize=(8, 4))
 
     dates = DateTime(obs_aimpoints['mean_date'])
     years = dates.frac_year
@@ -340,35 +338,48 @@ def plot_observed_aimpoints(obs_aimpoints):
         uplims[axis] = obs_aimpoints[axis] < -10
         obs_aimpoints[axis] = obs_aimpoints[axis].clip(-10, 10)
 
-    ok = ((np.abs(obs_aimpoints['target_offset_y']) < 100) &
-          (np.abs(obs_aimpoints['target_offset_z']) < 100))
-    plot_cxctime(times[ok], obs_aimpoints['dx'][ok], 'ob', label='CHIPX')
-    plot_cxctime(times[ok], obs_aimpoints['dy'][ok], 'or', label='CHIPY')
-    plot_cxctime(times[~ok], obs_aimpoints['dx'][~ok], '*b', label='CHIPX (offset > 100")')
-    plot_cxctime(times[~ok], obs_aimpoints['dy'][~ok], '*r', label='CHIPY (offset > 100")')
 
-    for axis in ('dx', 'dy'):
-        if np.any(lolims[axis]):
-            plt.errorbar(DateTime(times[lolims[axis]]).plotdate,
-                         obs_aimpoints[axis][lolims[axis]], marker='.', yerr=1.5, lolims=True)
-        if np.any(uplims[axis]):
-            plt.errorbar(DateTime(times[uplims[axis]]).plotdate,
-                         obs_aimpoints[axis][uplims[axis]], marker='.', yerr=1.5, uplims=True)
+    for idx, axis, label in zip([1, 2], ['dx', 'dy'], ['CHIPX', 'CHIPY']):
+        plt.close(idx)
+        fig = plt.figure(idx, figsize=(8, 4))
 
-    plt.grid()
-    ymax = max(12, np.max(np.abs(obs_aimpoints['dx'])), np.max(np.abs(obs_aimpoints['dy'])))
-    plt.ylim(-ymax, ymax)
-    plt.ylabel('Offset (arcsec)')
-    plt.title('Observed aimpoint offsets')
+        for det, c in zip(['HRC-I', 'HRC-S', 'ACIS-I', 'ACIS-S'],
+                          ['cyan', 'magenta', 'red', 'blue']):
+            ok = ((np.abs(obs_aimpoints['target_offset_y']) < 100) &
+                  (np.abs(obs_aimpoints['target_offset_z']) < 100) &
+                  (obs_aimpoints['detector'] == det))
+            nok = ((np.abs(obs_aimpoints['target_offset_y']) >= 100) &
+                  (np.abs(obs_aimpoints['target_offset_z']) >= 100) &
+                  (obs_aimpoints['detector'] == det))
 
-    plt.legend(loc='upper left', fontsize='small', title='', framealpha=0.5)
+            if np.count_nonzero(ok):
+                plot_cxctime(times[ok], obs_aimpoints[axis][ok], marker='o', color=c, linestyle='', alpha=.5,
+                             label='{}'.format(det))
+            if np.count_nonzero(nok):
+                plot_cxctime(times[nok], obs_aimpoints[axis][nok], marker='*', color=c, linestyle='',
+                             label='{} (offset > 100")'.format(det))
+            if np.any(lolims[axis]):
+                plt.errorbar(DateTime(times[lolims[axis]]).plotdate,
+                             obs_aimpoints[axis][lolims[axis]], marker='.', linestyle='',
+                             color=c, yerr=1.5, lolims=True)
+            if np.any(uplims[axis]):
+                plt.errorbar(DateTime(times[uplims[axis]]).plotdate,
+                             obs_aimpoints[axis][uplims[axis]], marker='.', linestyle='',
+                             color=c, yerr=1.5, uplims=True)
+        plt.grid()
+        ymax = max(12, np.max(np.abs(obs_aimpoints[axis])))
+        plt.ylim(-ymax - 5, ymax + 5)
+        plt.ylabel('Offset (arcsec)')
+        plt.title('Observed aimpoint offsets {}'.format(label))
 
-    outroot = os.path.join(opt.data_root, 'observed_aimpoints')
-    logger.info('Writing plot files {}.png,html'.format(outroot))
-    mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
-    mpld3.save_html(fig, outroot + '.html')
-    fig.patch.set_visible(False)
-    plt.savefig(outroot + '.png', frameon=False)
+        plt.legend(loc='upper left', fontsize='x-small', title='', framealpha=0.5, numpoints=1)
+
+        outroot = os.path.join(opt.data_root, 'observed_aimpoints_{}'.format(axis))
+        logger.info('Writing plot files {}.png,html'.format(outroot))
+        mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
+        mpld3.save_html(fig, outroot + '.html')
+        fig.patch.set_visible(False)
+        plt.savefig(outroot + '.png', frameon=False)
 
 
 def main():

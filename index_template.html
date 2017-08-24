@@ -94,9 +94,11 @@ archive L2 X-ray event file.  The plot shows up to 6 months of data starting fro
 dynamic aimpoints were initially put into use (AUG2916 schedule).
 
 {% if static %}
-<img src="observed_aimpoints.png">
+<img src="observed_aimpoints_dx.png">
+<img src="observed_aimpoints_dy.png">
 {% else %}
-<!--#include virtual="observed_aimpoints.html"-->
+<!--#include virtual="observed_aimpoints_dx.html"-->
+<!--#include virtual="observed_aimpoints_dy.html"-->
 {% endif %}
 
 The data values are stored in the observed aimpoints table
