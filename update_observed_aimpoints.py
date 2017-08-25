@@ -334,9 +334,9 @@ def plot_observed_aimpoints(obs_aimpoints):
     lolims = {}
     uplims = {}
     for axis in ('dx', 'dy'):
-        lolims[axis] = obs_aimpoints[axis] > 10
-        uplims[axis] = obs_aimpoints[axis] < -10
-        obs_aimpoints[axis] = obs_aimpoints[axis].clip(-10, 10)
+        lolims[axis] = obs_aimpoints[axis] > 15
+        uplims[axis] = obs_aimpoints[axis] < -15
+        obs_aimpoints[axis] = obs_aimpoints[axis].clip(-15, 15)
 
 
     for idx, axis, label in zip([1, 2], ['dx', 'dy'], ['CHIPX', 'CHIPY']):
@@ -365,8 +365,7 @@ def plot_observed_aimpoints(obs_aimpoints):
                              obs_aimpoints[axis][uplims[axis]], marker='.', linestyle='',
                              color=c, yerr=1.5, uplims=True)
         plt.grid()
-        ymax = max(12, np.max(np.abs(obs_aimpoints[axis])))
-        plt.ylim(-ymax - 5, ymax + 5)
+        plt.ylim(-17, 17)
         plt.ylabel('Offset (arcsec)')
         plt.title('Observed aimpoint offsets {}'.format(label))
 
