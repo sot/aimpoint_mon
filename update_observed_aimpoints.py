@@ -345,12 +345,11 @@ def plot_observed_aimpoints(obs_aimpoints):
 
         for det, c in zip(['HRC-I', 'HRC-S', 'ACIS-I', 'ACIS-S'],
                           ['cyan', 'magenta', 'red', 'blue']):
-            ok = ((np.abs(obs_aimpoints['target_offset_y']) < 100) &
-                  (np.abs(obs_aimpoints['target_offset_z']) < 100) &
-                  (obs_aimpoints['detector'] == det))
-            nok = ((np.abs(obs_aimpoints['target_offset_y']) >= 100) &
-                  (np.abs(obs_aimpoints['target_offset_z']) >= 100) &
-                  (obs_aimpoints['detector'] == det))
+            offset_ok = ((np.abs(obs_aimpoints['target_offset_y']) < 100) &
+                         (np.abs(obs_aimpoints['target_offset_z']) < 100))
+            det_ok = obs_aimpoints['detector'] == det
+            ok = offset_ok & det_ok
+            nok = ~offset_ok & det_ok
 
             if np.count_nonzero(ok):
                 plot_cxctime(times[ok], obs_aimpoints[axis][ok], marker='o', color=c, linestyle='', alpha=.5,
