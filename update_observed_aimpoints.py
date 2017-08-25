@@ -355,8 +355,7 @@ def plot_observed_aimpoints(obs_aimpoints):
                 plot_cxctime(times[ok], obs_aimpoints[axis][ok], marker='o', color=c, linestyle='', alpha=.5,
                              label='{}'.format(det))
             if np.count_nonzero(nok):
-                plot_cxctime(times[nok], obs_aimpoints[axis][nok], marker='*', color=c, linestyle='',
-                             label='{} (offset > 100")'.format(det))
+                plot_cxctime(times[nok], obs_aimpoints[axis][nok], marker='*', color=c, linestyle='')
             if np.any(lolims[axis]):
                 plt.errorbar(DateTime(times[lolims[axis]]).plotdate,
                              obs_aimpoints[axis][lolims[axis]], marker='.', linestyle='',
