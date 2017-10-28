@@ -117,7 +117,7 @@ def get_asol(info=None):
             asol['dy'][:i0] -= jump['d_dy'] / 20.0
             asol['dz'][:i0] -= jump['d_dz'] / 20.0
             # Capture info about jump
-            info.setdefault('aimpoint_jumps', {})[date] = jump
+            #info.setdefault('aimpoint_jumps', {})[date] = jump
             logger.info('Applying aimpoint jump of {} at {}'.format(jump, date))
 
     return asol

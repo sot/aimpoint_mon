@@ -339,10 +339,10 @@ def plot_observed_aimpoints(obs_aimpoints):
         obs_aimpoints[axis] = obs_aimpoints[axis].clip(-15, 15)
 
 
-    for idx, axis, label in zip([1, 2], ['dx', 'dy'], ['CHIPX', 'CHIPY']):
-        plt.close(idx)
-        fig = plt.figure(idx, figsize=(8, 4))
-
+    plt.close(1)
+    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, num=1,
+                             figsize=(8, 8))
+    for idx, axis, label in zip([0, 1], ['dx', 'dy'], ['CHIPX', 'CHIPY']):
         for det, c in zip(['HRC-I', 'HRC-S', 'ACIS-I', 'ACIS-S'],
                           ['cyan', 'magenta', 'red', 'blue']):
             offset_ok = ((np.abs(obs_aimpoints['target_offset_y']) < 100) &
@@ -353,30 +353,31 @@ def plot_observed_aimpoints(obs_aimpoints):
 
             if np.count_nonzero(ok):
                 plot_cxctime(times[ok], obs_aimpoints[axis][ok], marker='o', color=c, linestyle='', alpha=.5,
-                             label='{}'.format(det))
-            if np.count_nonzero(nok):
-                plot_cxctime(times[nok], obs_aimpoints[axis][nok], marker='*', color=c, linestyle='')
-            if np.any(lolims[axis]):
-                plt.errorbar(DateTime(times[lolims[axis]]).plotdate,
-                             obs_aimpoints[axis][lolims[axis]], marker='.', linestyle='',
-                             color=c, yerr=1.5, lolims=True)
-            if np.any(uplims[axis]):
-                plt.errorbar(DateTime(times[uplims[axis]]).plotdate,
-                             obs_aimpoints[axis][uplims[axis]], marker='.', linestyle='',
-                             color=c, yerr=1.5, uplims=True)
-        plt.grid()
-        plt.ylim(-17, 17)
-        plt.ylabel('Offset (arcsec)')
-        plt.title('Observed aimpoint offsets {}'.format(label))
+                             label='{}'.format(det), ax=axes[idx])
+            #if np.count_nonzero(nok):
+            #    plot_cxctime(times[nok], obs_aimpoints[axis][nok], marker='*', color=c, linestyle='',
+            #                 ax=axes[idx])
+            #if np.any(lolims[axis]):
+            #    axes[idx].errorbar(DateTime(times[lolims[axis]]).plotdate,
+            #                 obs_aimpoints[axis][lolims[axis]], marker='.', linestyle='',
+            #                 color=c, yerr=1.5, lolims=True)
+            #if np.any(uplims[axis]):
+            #    axes[idx].errorbar(DateTime(times[uplims[axis]]).plotdate,
+            #                 obs_aimpoints[axis][uplims[axis]], marker='.', linestyle='',
+            #                 color=c, yerr=1.5, uplims=True)
+        axes[idx].grid()
+        axes[idx].set_ylim(-17, 17)
+        axes[idx].set_ylabel('Offset (arcsec)')
+        axes[idx].set_title('Observed aimpoint offsets {}'.format(label))
 
-        plt.legend(loc='upper left', fontsize='x-small', title='', framealpha=0.5, numpoints=1)
+        axes[idx].legend(loc='upper left', fontsize='x-small', title='', framealpha=0.5, numpoints=1)
 
-        outroot = os.path.join(opt.data_root, 'observed_aimpoints_{}'.format(axis))
-        logger.info('Writing plot files {}.png,html'.format(outroot))
-        mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
-        mpld3.save_html(fig, outroot + '.html')
-        fig.patch.set_visible(False)
-        plt.savefig(outroot + '.png', frameon=False)
+    outroot = os.path.join(opt.data_root, 'observed_aimpoints')
+    logger.info('Writing plot files {}.png,html'.format(outroot))
+    mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
+    mpld3.save_html(fig, outroot + '.html')
+    fig.patch.set_visible(False)
+    plt.savefig(outroot + '.png', frameon=False)
 
 
 def main():
