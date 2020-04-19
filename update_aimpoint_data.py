@@ -35,17 +35,20 @@ def get_opt():
 def get_asol(obsid, asol_files, dt):
     logger.info('Reading...\n{}'.format('\n'.join(asol_files)))
     asols = [Table.read(asol_file) for asol_file in asol_files]
-    # Check to see if they all have raw columns
+
+    # Check to see if the asol files have raw columns ( >= DS 10.8.3)
     has_raws = ['ady' in asol.colnames for asol in asols]
     if np.any(has_raws) and not np.all(has_raws):
         raise ValueError("Some asol files have raw cols and some do not")
-    # Get just the useful columns
+
+    # Reduce to just the columns needed by the tool
     if np.any(has_raws):
         cols = ('time', 'ady', 'adz', 'adtheta')
     else:
         cols = ('time', 'dy', 'dz', 'dtheta')
     asols = [asol[cols] for asol in asols]
     asol = vstack(asols)
+
     # And rename any raw columns to use the old names
     if np.any(has_raws):
         asol.rename_column('ady', 'dy')
