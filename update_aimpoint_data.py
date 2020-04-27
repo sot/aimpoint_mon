@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 
+import os
 import re
 import shelve
 import argparse
-import os
-
 import tables
 import numpy as np
+
 from Chandra.Time import DateTime
 from astropy.table import Table, Column, vstack
 from astropy.time import Time
 from mica.archive import asp_l1
 from Ska.DBI import DBI
+from mica.common import MICA_ARCHIVE
 import pyyaks.logger
 
 
@@ -31,10 +32,28 @@ def get_opt():
     return parser.parse_args()
 
 
-def get_asol(obsid, asol_files, dt, cols=('time', 'dy', 'dz', 'dtheta')):
+def get_asol(obsid, asol_files, dt):
     logger.info('Reading...\n{}'.format('\n'.join(asol_files)))
-    asols = [Table.read(asol_file)[cols] for asol_file in asol_files]
+    asols = [Table.read(asol_file) for asol_file in asol_files]
+
+    # Check to see if the asol files have raw columns ( >= DS 10.8.3)
+    has_raws = ['ady' in asol.colnames for asol in asols]
+    if np.any(has_raws) and not np.all(has_raws):
+        raise ValueError("Some asol files have raw cols and some do not")
+
+    # Reduce to just the columns needed by the tool
+    if np.any(has_raws):
+        cols = ('time', 'ady', 'adz', 'adtheta')
+    else:
+        cols = ('time', 'dy', 'dz', 'dtheta')
+    asols = [asol[cols] for asol in asols]
     asol = vstack(asols)
+
+    # And rename any raw columns to use the old names
+    if np.any(has_raws):
+        asol.rename_column('ady', 'dy')
+        asol.rename_column('adz', 'dz')
+        asol.rename_column('adtheta', 'dtheta')
 
     t0, t1 = asol['time'][[10, -10]]
     n_times = 2 + int((t1 - t0) // (dt * 1000))
@@ -51,16 +70,15 @@ def get_asol(obsid, asol_files, dt, cols=('time', 'dy', 'dz', 'dtheta')):
 
 def add_asol_to_h5(filename, asol):
     asol = asol.as_array()
-    h5 = tables.openFile(filename, mode='a',
-                         filters=tables.Filters(complevel=5, complib='zlib'))
-    try:
-        logger.info('Appending {} records to {}'.format(len(asol), filename))
-        h5.root.data.append(asol)
-    except tables.NoSuchNodeError:
-        logger.info('Creating {}'.format(filename))
-        h5.createTable(h5.root, 'data', asol, "Aimpoint drift", expectedrows=1e6)
-    h5.root.data.flush()
-    h5.close()
+    with tables.openFile(filename, mode='a',
+                          filters=tables.Filters(complevel=5, complib='zlib')) as h5:
+        try:
+            logger.info('Appending {} records to {}'.format(len(asol), filename))
+            h5.root.data.append(asol)
+        except tables.NoSuchNodeError:
+            logger.info('Creating {}'.format(filename))
+            h5.createTable(h5.root, 'data', asol, "Aimpoint drift", expectedrows=1e6)
+        h5.root.data.flush()
 
 
 # Set up logging
@@ -76,14 +94,16 @@ logger.info('Processsing from {} to {}'.format(start.date, stop.date))
 
 # Define file names
 h5_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
+
+# When we go to PY3, just remove '.shelve' to make this work.
 obsid_file = os.path.join(opt.data_root, 'aimpoint_obsid_index.shelve')
 
 # Get obsids in date range
-db = DBI(dbi='sqlite', server='/data/aca/archive/obspar/archfiles.db3')
-obs = db.fetchall('select obsid, tstart from archfiles where tstart > {}'
-                  ' and tstart < {}'
-                  .format(start.secs, stop.secs))
-db.conn.close()
+mica_obspar_db = os.path.join(MICA_ARCHIVE, 'obspar', 'archfiles.db3')
+with DBI(dbi='sqlite', server=mica_obspar_db) as db:
+    obs = db.fetchall('select obsid, tstart from archfiles where tstart > {}'
+                      ' and tstart < {}'
+                      .format(start.secs, stop.secs))
 
 # Get unique obsids and then sort by tstart
 idx = np.unique(obs['obsid'], return_index=True)[1]
