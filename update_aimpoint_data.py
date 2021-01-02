@@ -70,7 +70,7 @@ def get_asol(obsid, asol_files, dt):
 
 def add_asol_to_h5(filename, asol):
     asol = asol.as_array()
-    with tables.openFile(filename, mode='a',
+    with tables.open_file(filename, mode='a',
                           filters=tables.Filters(complevel=5, complib='zlib')) as h5:
         try:
             logger.info('Appending {} records to {}'.format(len(asol), filename))

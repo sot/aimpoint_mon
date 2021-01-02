@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-from __future__ import division
+
 
 import json
 import re
 import os
 import argparse
-from itertools import izip
+
 
 import numpy as np
 from astropy.table import Table, Column
@@ -76,9 +76,8 @@ def get_asol(info=None):
 
     h5_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
     logger.info('Reading asol file {}'.format(h5_file))
-    h5 = tables.openFile(h5_file)
-    asol = Table(h5.root.data[:])
-    h5.close()
+    with tables.open_file(h5_file) as h5:
+        asol = Table(h5.root.data[:])
 
     bad = (asol['dy'] == 0.0) & (asol['dz'] == 0.0)
     asol = asol[~bad]
@@ -189,7 +188,7 @@ class AsolBinnedStats(object):
             _attr = '_' + attr
             if not hasattr(self, _attr):
                 rows = []
-                for group, isort in izip(self.grouped.groups, self.argsort[col]):
+                for group, isort in zip(self.grouped.groups, self.argsort[col]):
                     ii = (int(perc) * (len(group) - 1)) // 100
                     rows.append(group[isort[ii]])
                 val = Table(rows=rows, names=self.grouped.colnames)
@@ -236,7 +235,7 @@ class AsolBinnedStats(object):
         for col in ('dy', 'dz'):
             for perc in (50, 90, -5):
                 rows = []
-                for group, i_sort in izip(t_bin.groups, i_sorts[col]):
+                for group, i_sort in zip(t_bin.groups, i_sorts[col]):
                     if perc < 0:
                         for row in group[i_sort[perc:]]:
                             rows.append(row)
@@ -247,8 +246,8 @@ class AsolBinnedStats(object):
 
         plt.close(1)
         fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, num=1)
-        for col, ax in izip(('dy', 'dz'), axes):
-            for perc, color in izip((50, 90, -5), ('b', 'm', 'r')):
+        for col, ax in zip(('dy', 'dz'), axes):
+            for perc, color in zip((50, 90, -5), ('b', 'm', 'r')):
                 t = outs[str(perc) + col]
                 if perc < 0:
                     ax.plot(t['year'], t[col], '.', color=color, markersize=5,

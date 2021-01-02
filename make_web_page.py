@@ -36,7 +36,7 @@ logger.info('Loading info file {}'.format(info_file))
 context = json.load(open(info_file, 'r'))
 
 # Get the last record of asol aimpoint values
-h5 = tables.openFile(asol_file)
+h5 = tables.open_file(asol_file)
 last = h5.root.data[-1]
 h5.close()
 
