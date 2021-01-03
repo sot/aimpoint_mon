@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
+import numpy as np
 from Quaternion import Quat
 
 # Confirm that Quat.transform gives the rotation matrix that
@@ -29,7 +29,7 @@ q_ra_dec_roll = Quat([20, 40, 60])
 #
 # This rotates the X-axis vector in ECI.
 #
-M = q_ra.transform .dot (q_dec.transform) .dot (q_roll.transform)
+M = q_ra.transform @ q_dec.transform @ q_roll.transform
 print('M\n', M)
 print('q_ra_dec_roll.transform\n', q_ra_dec_roll.transform)
 print((q_ra * q_dec * q_roll).transform)

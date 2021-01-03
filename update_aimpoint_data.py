@@ -2,9 +2,11 @@
 
 import os
 import re
-import shelve
 import argparse
 import tables
+from pathlib import Path
+import pickle
+
 import numpy as np
 
 from Chandra.Time import DateTime
@@ -47,7 +49,7 @@ def get_asol(obsid, asol_files, dt):
     else:
         cols = ('time', 'dy', 'dz', 'dtheta')
     asols = [asol[cols] for asol in asols]
-    asol = vstack(asols)
+    asol = vstack(asols, metadata_conflicts='silent')
 
     # And rename any raw columns to use the old names
     if np.any(has_raws):
@@ -70,7 +72,7 @@ def get_asol(obsid, asol_files, dt):
 
 def add_asol_to_h5(filename, asol):
     asol = asol.as_array()
-    with tables.openFile(filename, mode='a',
+    with tables.open_file(filename, mode='a',
                           filters=tables.Filters(complevel=5, complib='zlib')) as h5:
         try:
             logger.info('Appending {} records to {}'.format(len(asol), filename))
@@ -95,8 +97,6 @@ logger.info('Processsing from {} to {}'.format(start.date, stop.date))
 # Define file names
 h5_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
 
-# When we go to PY3, just remove '.shelve' to make this work.
-obsid_file = os.path.join(opt.data_root, 'aimpoint_obsid_index.shelve')
 
 # Get obsids in date range
 mica_obspar_db = os.path.join(MICA_ARCHIVE, 'obspar', 'archfiles.db3')
@@ -112,7 +112,13 @@ obs.sort('tstart')
 obs['datestart'] = Time(obs['tstart'], format='cxcsec').yday
 obs.pprint(max_lines=-1)
 
-obsid_index = shelve.open(obsid_file)
+# Dict of obsid => list of ASPSOL files. This keeps track of obsids that have
+# been processed.
+obsid_file = Path(opt.data_root) / 'aimpoint_obsid_index.pkl'
+if obsid_file.exists():
+    obsid_index = pickle.load(open(obsid_file, 'rb'))
+else:
+    obsid_index = {}
 
 # Go through obsids and either process or skip
 for obsid in obs['obsid']:
@@ -130,7 +136,7 @@ for obsid in obs['obsid']:
     add_asol_to_h5(h5_file, asol)
     obsid_index[str(obsid)] = asol_files
 
-obsid_index.close()
+pickle.dump(obsid_index, open(obsid_file, 'wb'))
 
 logger.info('File {} updated'.format(h5_file))
 logger.info('File {} updated'.format(obsid_file))
