@@ -193,7 +193,7 @@ def write_index_file(info_table):
         updated_file       baseline_file           date       dy_acis_i dz_acis_i dy_acis_s dz_acis_s
     ------------------- ------------------- ----------------- --------- --------- --------- ---------
     CHARACTERIS_12OCT15 CHARACTERIS_12MAR15 2015:285:01:21:25     -5.00     10.00     15.00    -20.00
-    """
+    """  # noqa
     index_file = os.path.join(opt.data_root, 'characteristics', 'index')
     if os.path.exists(index_file):
         index = Table.read(index_file, format='ascii.fixed_width_two_line', guess=False)
@@ -324,6 +324,7 @@ def main():
     print('SEND FOLLOWING EMAIL\n')
     out = get_email_text(info['baseline_file'], info['updated_file'])
     print(out)
+
 
 if __name__ == '__main__':
     main()

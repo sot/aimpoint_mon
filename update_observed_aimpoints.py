@@ -9,9 +9,10 @@ inspection.
 import os
 import glob
 import functools
-import shelve
 import argparse
 import warnings
+from pathlib import Path
+import pickle
 
 import numpy as np
 from astropy.table import Table, vstack
@@ -25,7 +26,6 @@ import pyyaks.logger
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import mpld3
 from Ska.Matplotlib import plot_cxctime
 
 
@@ -87,37 +87,30 @@ def get_opt(args=None):
 
 def get_evt_meta(obsid, detector):
     """
-    Get event file metadata (FITS keywords) for ``obsid`` and ``detector`` and cache for later use.
+    Get event file metadata (FITS keywords) for ``obsid`` and ``detector``.
 
     Returns a dict of key=value pairs, or None if there is no data in archive.
     """
-    evts = shelve.open('event_meta.shelf')
-    sobsid = str(obsid)
-    if sobsid not in evts:
-        det = 'hrc' if detector.startswith('HRC') else 'acis'
-        arc5gl = Ska.arc5gl.Arc5gl()
-        arc5gl.sendline('obsid={}'.format(obsid))
-        arc5gl.sendline('get {}2'.format(det) + '{evt2}')
-        del arc5gl
+    logger.info(f'Getting {obsid} {detector} from archive')
+    det = 'hrc' if detector.startswith('HRC') else 'acis'
+    arc5gl = Ska.arc5gl.Arc5gl()
+    arc5gl.sendline('obsid={}'.format(obsid))
+    arc5gl.sendline('get {}2'.format(det) + '{evt2}')
+    del arc5gl
 
-        files = glob.glob('{}f{}*_evt2.fits.gz'.format(det, obsid))
-        if len(files) == 0:
-            raise NoObsidError('No event file found for obsid {}'.format(obsid))
-        if len(files) > 1:
-            raise TooManyFilesError('Wrong number of files {}'.format(files))
+    files = glob.glob('{}f{}*_evt2.fits.gz'.format(det, obsid))
+    if len(files) == 0:
+        raise NoObsidError('No event file found for obsid {}'.format(obsid))
+    if len(files) > 1:
+        raise TooManyFilesError('Wrong number of files {}'.format(files))
 
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            evt2 = Table.read(files[0], hdu=1)
-        os.unlink(files[0])
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        evt2 = Table.read(files[0], hdu=1)
+    os.unlink(files[0])
 
-        evt = {k.lower(): v for k, v in evt2.meta.items()}
-        evt['obs_chipx'], evt['obs_chipy'], evt['obs_chip_id'] = dmcoords_chipx_chipy(evt)
-        evts[sobsid] = evt
-    else:
-        evt = evts[sobsid]
-
-    evts.close()
+    evt = {k.lower(): v for k, v in evt2.meta.items()}
+    evt['obs_chipx'], evt['obs_chipy'], evt['obs_chip_id'] = dmcoords_chipx_chipy(evt)
 
     return evt
 
@@ -181,18 +174,20 @@ def get_observed_aimpoint_offset(obsid):
     Compare the predicted CHIPX/Y values with planned using observed event file
     data on actual ACA alignment.
     """
+    # Information from dynamical_offsets.txt file in mission planning products.
     plan = get_mp_aimpoint_entry(obsid)
     detector = plan['detector']
-
-    evt = get_evt_meta(obsid, detector)
-
-    arcsec_per_pixel = 0.13175 if detector.startswith('HRC') else 0.492
-    arcsec_per_mm = 20.49  # arcsec/radian / focal length (mm)
-
     plan_chipx = plan['chipx']
     plan_chipy = plan['chipy']
     offset_y = plan['target_offset_y']
     offset_z = plan['target_offset_z']
+
+    # Information from observation evt2 file header. In particular DY/Z_AVG gets
+    # converted to CHIPX/Y using dmcoords.
+    evt = get_evt_meta(obsid, detector)
+
+    arcsec_per_pixel = 0.13175 if detector.startswith('HRC') else 0.492
+    arcsec_per_mm = 20.49  # arcsec/radian / focal length (mm)
 
     # Coordinates:
     # In cycle 18 POG figures 4.26 - 29.
@@ -312,7 +307,7 @@ def update_observed_aimpoints():
             dat[name].format = '.2f'
 
         dat.sort('mean_date')
-        dat.write(filename, format='ascii.ecsv')
+        dat.write(filename, format='ascii.ecsv', overwrite=True)
     else:
         dat = dat_old
 
@@ -321,7 +316,7 @@ def update_observed_aimpoints():
 
 def plot_observed_aimpoints(obs_aimpoints):
     """
-    Make png and html (mpld3) plot of data in the ``obs_aimpoints`` table.
+    Make png plot of data in the ``obs_aimpoints`` table.
     """
 
     dates = DateTime(obs_aimpoints['mean_date'])
@@ -338,7 +333,6 @@ def plot_observed_aimpoints(obs_aimpoints):
         uplims[axis] = obs_aimpoints[axis] < -15
         obs_aimpoints[axis] = obs_aimpoints[axis].clip(-15, 15)
 
-
     for idx, axis, label in zip([1, 2], ['dx', 'dy'], ['CHIPX', 'CHIPY']):
         plt.close(idx)
         fig = plt.figure(idx, figsize=(8, 4))
@@ -351,19 +345,22 @@ def plot_observed_aimpoints(obs_aimpoints):
             ok = offset_ok & det_ok
             nok = ~offset_ok & det_ok
 
+            kwargs = dict(markeredgecolor='k', markeredgewidth=0.5, linestyle='')
             if np.count_nonzero(ok):
-                plot_cxctime(times[ok], obs_aimpoints[axis][ok], marker='o', color=c, linestyle='', alpha=.5,
-                             label='{}'.format(det))
+                plot_cxctime(times[ok], obs_aimpoints[axis][ok], marker='o',
+                             markerfacecolor=c,
+                             alpha=0.5, label=det, **kwargs)
             if np.count_nonzero(nok):
-                plot_cxctime(times[nok], obs_aimpoints[axis][nok], marker='*', color=c, linestyle='')
+                plot_cxctime(times[nok], obs_aimpoints[axis][nok], marker='*',
+                             markerfacecolor=c, **kwargs)
             if np.any(lolims[axis]):
                 plt.errorbar(DateTime(times[lolims[axis]]).plotdate,
-                             obs_aimpoints[axis][lolims[axis]], marker='.', linestyle='',
-                             color=c, yerr=1.5, lolims=True)
+                             obs_aimpoints[axis][lolims[axis]], marker='.',
+                             markerfacecolor=c, yerr=1.5, lolims=True, **kwargs)
             if np.any(uplims[axis]):
                 plt.errorbar(DateTime(times[uplims[axis]]).plotdate,
-                             obs_aimpoints[axis][uplims[axis]], marker='.', linestyle='',
-                             color=c, yerr=1.5, uplims=True)
+                             obs_aimpoints[axis][uplims[axis]], marker='.',
+                             markerfacecolor=c, yerr=1.5, uplims=True, **kwargs)
         plt.grid()
         plt.ylim(-17, 17)
         plt.ylabel('Offset (arcsec)')
@@ -371,12 +368,15 @@ def plot_observed_aimpoints(obs_aimpoints):
 
         plt.legend(loc='upper left', fontsize='x-small', title='', framealpha=0.5, numpoints=1)
 
+        ax = plt.gca()
+        plt.plot([0.5], [0.9], marker='*', markerfacecolor='none', transform=ax.transAxes, **kwargs)
+        plt.text(0.52, 0.9, 'Target offset > 100 arcsec', horizontalalignment='left',
+                 verticalalignment='center', transform=ax.transAxes, fontsize='small')
+
         outroot = os.path.join(opt.data_root, 'observed_aimpoints_{}'.format(axis))
-        logger.info('Writing plot files {}.png,html'.format(outroot))
-        mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
-        mpld3.save_html(fig, outroot + '.html')
+        logger.info('Writing plot files {}.png'.format(outroot))
         fig.patch.set_visible(False)
-        plt.savefig(outroot + '.png', frameon=False)
+        plt.savefig(outroot + '.png', facecolor="none")
 
 
 def main():
@@ -386,7 +386,8 @@ def main():
     obs_aimpoints = update_observed_aimpoints()
     plot_observed_aimpoints(obs_aimpoints)
     obs_aimpoints.write(os.path.join(opt.data_root, 'observed_aimpoints_table.html'),
-                        format='ascii.html')
+                        format='ascii.html', overwrite=True)
+
 
 if __name__ == '__main__':
     main()

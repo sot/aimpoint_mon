@@ -17,6 +17,7 @@ def get_opt():
                         help="Root directory for asol and index files")
     return parser.parse_args()
 
+
 # Options
 opt = get_opt()
 
@@ -27,8 +28,7 @@ logger = pyyaks.logger.get_logger(name='make_web_page', level=loglevel,
 # Files
 asol_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
 index_template_file = os.path.join(opt.data_root, 'index_template.html')
-index_files = {False: os.path.join(opt.data_root, 'index.html'),
-               True: os.path.join(opt.data_root, 'index_static.html')}
+index_file = os.path.join(opt.data_root, 'index.html')
 info_file = os.path.join(opt.data_root, 'info.json')
 
 # Jinja template context
@@ -42,10 +42,8 @@ h5.close()
 
 template = Template(open(index_template_file).read())
 
-for static in (True, False):
-    context['static'] = static
-    html = template.render(**context)
-    index_file = index_files[static]
-    logger.info('Writing index file {}'.format(index_file))
-    with open(index_file, 'w') as fh:
-        fh.write(html)
+context['static'] = True
+html = template.render(**context)
+logger.info('Writing index file {}'.format(index_file))
+with open(index_file, 'w') as fh:
+    fh.write(html)

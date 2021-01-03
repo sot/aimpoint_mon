@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-
-
 import json
 import re
 import os
@@ -21,8 +19,6 @@ matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-
-import mpld3
 
 # Set up logging
 loglevel = pyyaks.logger.INFO
@@ -78,7 +74,6 @@ def get_asol(info=None):
     logger.info('Reading asol file {}'.format(h5_file))
     with tables.open_file(h5_file) as h5:
         asol = Table(h5.root.data[:])
-
     bad = (asol['dy'] == 0.0) & (asol['dz'] == 0.0)
     asol = asol[~bad]
 
@@ -265,13 +260,10 @@ class AsolBinnedStats(object):
         axes[0].legend(loc='upper left', fontsize='small', title='')
         axes[1].set_xlabel('Year')
 
-        mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
-
         outroot = os.path.join(opt.data_root, 'intra_obs_dy_dz')
-        logger.info('Writing plot files {}.png,html'.format(outroot))
-        mpld3.save_html(fig, outroot + '.html')
+        logger.info('Writing plot files {}.png'.format(outroot))
         fig.patch.set_visible(False)
-        plt.savefig(outroot + '.png', frameon=False)
+        plt.savefig(outroot + '.png', facecolor="none")
 
     def get_chip_x_y_info(self):
         """
@@ -396,15 +388,10 @@ class AsolBinnedStats(object):
         ax3.yaxis.tick_right()
         ax3.grid()
 
-        plt.show()
-        mpld3.plugins.connect(fig, mpld3.plugins.LinkedBrush(points))
-        mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
-
         outroot = os.path.join(opt.data_root, 'chip_x_y_{}'.format(self.det_title))
-        logger.info('Writing plot files {}.png,html'.format(outroot))
-        mpld3.save_html(fig, outroot + '.html')
+        logger.info('Writing plot files {}.png'.format(outroot))
         fig.patch.set_visible(False)
-        plt.savefig(outroot + '.png', frameon=False)
+        plt.savefig(outroot + '.png', facecolor="none")
 
 
 def plot_housing_temperature():
@@ -419,11 +406,9 @@ def plot_housing_temperature():
     plt.title('Aspect Camera housing temperature trend')
 
     outroot = os.path.join(opt.data_root, 'aca_housing_temperature')
-    logger.info('Writing plot files {}.png,html'.format(outroot))
-    mpld3.plugins.connect(fig, mpld3.plugins.MousePosition(fmt='.1f'))
-    mpld3.save_html(fig, outroot + '.html')
+    logger.info('Writing plot files {}.png'.format(outroot))
     fig.patch.set_visible(False)
-    plt.savefig(outroot + '.png', frameon=False)
+    plt.savefig(outroot + '.png', facecolor="none")
 
 
 def make_pure_python(obj):
