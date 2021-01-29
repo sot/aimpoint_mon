@@ -3,6 +3,7 @@
 import os
 import argparse
 import json
+from pathlib import Path
 
 from jinja2 import Template
 import pyyaks.logger
@@ -28,7 +29,7 @@ logger = pyyaks.logger.get_logger(name='make_web_page', level=loglevel,
 
 def main():
     # Files
-    index_template_file = os.path.join(opt.data_root, 'index_template.html')
+    index_template_file = Path(__file__).parent / 'data' / 'index_template.html'
     index_file = os.path.join(opt.data_root, 'index.html')
     info_file = os.path.join(opt.data_root, 'info.json')
 
