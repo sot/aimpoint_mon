@@ -370,7 +370,7 @@ class AsolBinnedStats(object):
         ax3.plot([POG['year']], [pogy], '*r', ms=15, zorder=100)
 
         plot_opt = dict(c=year, cmap=cm, alpha=0.8, s=6.0, linewidths=0.5, zorder=10)
-        points = ax1.scatter(chipx, chipy, **plot_opt)
+        ax1.scatter(chipx, chipy, **plot_opt)
         ax1.set_xlabel('CHIPX')
         ax1.set_ylabel('CHIPY')
         ax1.set_title('{} aimpoint position (CCD {})'.format(self.det, self.ccd))

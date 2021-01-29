@@ -5,7 +5,6 @@ import argparse
 import json
 
 from jinja2 import Template
-import tables
 import pyyaks.logger
 
 
@@ -25,25 +24,26 @@ opt = get_opt()
 loglevel = pyyaks.logger.INFO
 logger = pyyaks.logger.get_logger(name='make_web_page', level=loglevel,
                                   format="%(asctime)s %(message)s")
-# Files
-asol_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
-index_template_file = os.path.join(opt.data_root, 'index_template.html')
-index_file = os.path.join(opt.data_root, 'index.html')
-info_file = os.path.join(opt.data_root, 'info.json')
 
-# Jinja template context
-logger.info('Loading info file {}'.format(info_file))
-context = json.load(open(info_file, 'r'))
 
-# Get the last record of asol aimpoint values
-h5 = tables.open_file(asol_file)
-last = h5.root.data[-1]
-h5.close()
+def main():
+    # Files
+    index_template_file = os.path.join(opt.data_root, 'index_template.html')
+    index_file = os.path.join(opt.data_root, 'index.html')
+    info_file = os.path.join(opt.data_root, 'info.json')
 
-template = Template(open(index_template_file).read())
+    # Jinja template context
+    logger.info('Loading info file {}'.format(info_file))
+    context = json.load(open(info_file, 'r'))
 
-context['static'] = True
-html = template.render(**context)
-logger.info('Writing index file {}'.format(index_file))
-with open(index_file, 'w') as fh:
-    fh.write(html)
+    template = Template(open(index_template_file).read())
+
+    context['static'] = True
+    html = template.render(**context)
+    logger.info('Writing index file {}'.format(index_file))
+    with open(index_file, 'w') as fh:
+        fh.write(html)
+
+
+if __name__ == '__main__':
+    main()
