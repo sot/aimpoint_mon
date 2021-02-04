@@ -11,8 +11,6 @@ import glob
 import functools
 import argparse
 import warnings
-from pathlib import Path
-import pickle
 
 import numpy as np
 from astropy.table import Table, vstack

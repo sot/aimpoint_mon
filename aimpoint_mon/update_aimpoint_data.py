@@ -17,6 +17,11 @@ from Ska.DBI import DBI
 from mica.common import MICA_ARCHIVE
 import pyyaks.logger
 
+# Set up logging
+loglevel = pyyaks.logger.INFO
+logger = pyyaks.logger.get_logger(name='update_aimpoint_data', level=loglevel,
+                                  format="%(asctime)s %(message)s")
+
 
 def get_opt():
     parser = argparse.ArgumentParser(description='Get aimpoint drift data '
@@ -83,67 +88,66 @@ def add_asol_to_h5(filename, asol):
         h5.root.data.flush()
 
 
-# Set up logging
-loglevel = pyyaks.logger.INFO
-logger = pyyaks.logger.get_logger(name='update_aimpoint_data', level=loglevel,
-                                  format="%(asctime)s %(message)s")
+def main():
+    # Get options
+    opt = get_opt()
+    stop = DateTime(opt.stop)
+    start = stop - 10 if (opt.start is None) else DateTime(opt.start)
+    logger.info('Processsing from {} to {}'.format(start.date, stop.date))
 
-# Get options
-opt = get_opt()
-stop = DateTime(opt.stop)
-start = stop - 10 if (opt.start is None) else DateTime(opt.start)
-logger.info('Processsing from {} to {}'.format(start.date, stop.date))
+    # Define file names
+    h5_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
 
-# Define file names
-h5_file = os.path.join(opt.data_root, 'aimpoint_asol_values.h5')
+    # Get obsids in date range
+    mica_obspar_db = os.path.join(MICA_ARCHIVE, 'obspar', 'archfiles.db3')
+    with DBI(dbi='sqlite', server=mica_obspar_db) as db:
+        obs = db.fetchall('select obsid, tstart from archfiles where tstart > {}'
+                          ' and tstart < {}'
+                          .format(start.secs, stop.secs))
+
+    # Get unique obsids and then sort by tstart
+    idx = np.unique(obs['obsid'], return_index=True)[1]
+    obs = Table(obs[idx])
+    obs.sort('tstart')
+    obs['datestart'] = Time(obs['tstart'], format='cxcsec').yday
+    obs.pprint(max_lines=-1)
+
+    # Dict of obsid => list of ASPSOL files. This keeps track of obsids that have
+    # been processed.
+    obsid_file = Path(opt.data_root) / 'aimpoint_obsid_index.pkl'
+    if obsid_file.exists():
+        obsid_index = pickle.load(open(obsid_file, 'rb'))
+    else:
+        obsid_index = {}
+
+    # Go through obsids and either process or skip
+    for obsid in obs['obsid']:
+        if str(obsid) in obsid_index:
+            logger.info('Skipping obsid {} - already in archive'.format(obsid))
+            continue
+
+        logger.info('Processing obsid {}'.format(obsid))
+        asol_files = sorted(asp_l1.get_files(obsid=obsid, content='ASPSOL'))
+        if not asol_files:
+            logger.info('Skipping obsid {} - no asol files'.format(obsid))
+            continue
+
+        asol = get_asol(obsid, asol_files, opt.dt)
+        add_asol_to_h5(h5_file, asol)
+        obsid_index[str(obsid)] = asol_files
+
+    pickle.dump(obsid_index, open(obsid_file, 'wb'))
+
+    logger.info('File {} updated'.format(h5_file))
+    logger.info('File {} updated'.format(obsid_file))
+
+    # Write out to FITS
+    fits_file = re.sub(r'\.h5$', '.fits', h5_file)
+    dat = Table.read(h5_file, path='data')
+    dat.meta.clear()
+    dat.write(fits_file, overwrite=True)
+    logger.info('File {} updated'.format(fits_file))
 
 
-# Get obsids in date range
-mica_obspar_db = os.path.join(MICA_ARCHIVE, 'obspar', 'archfiles.db3')
-with DBI(dbi='sqlite', server=mica_obspar_db) as db:
-    obs = db.fetchall('select obsid, tstart from archfiles where tstart > {}'
-                      ' and tstart < {}'
-                      .format(start.secs, stop.secs))
-
-# Get unique obsids and then sort by tstart
-idx = np.unique(obs['obsid'], return_index=True)[1]
-obs = Table(obs[idx])
-obs.sort('tstart')
-obs['datestart'] = Time(obs['tstart'], format='cxcsec').yday
-obs.pprint(max_lines=-1)
-
-# Dict of obsid => list of ASPSOL files. This keeps track of obsids that have
-# been processed.
-obsid_file = Path(opt.data_root) / 'aimpoint_obsid_index.pkl'
-if obsid_file.exists():
-    obsid_index = pickle.load(open(obsid_file, 'rb'))
-else:
-    obsid_index = {}
-
-# Go through obsids and either process or skip
-for obsid in obs['obsid']:
-    if str(obsid) in obsid_index:
-        logger.info('Skipping obsid {} - already in archive'.format(obsid))
-        continue
-
-    logger.info('Processing obsid {}'.format(obsid))
-    asol_files = sorted(asp_l1.get_files(obsid=obsid, content='ASPSOL'))
-    if not asol_files:
-        logger.info('Skipping obsid {} - no asol files'.format(obsid))
-        continue
-
-    asol = get_asol(obsid, asol_files, opt.dt)
-    add_asol_to_h5(h5_file, asol)
-    obsid_index[str(obsid)] = asol_files
-
-pickle.dump(obsid_index, open(obsid_file, 'wb'))
-
-logger.info('File {} updated'.format(h5_file))
-logger.info('File {} updated'.format(obsid_file))
-
-# Write out to FITS
-fits_file = re.sub(r'\.h5$', '.fits', h5_file)
-dat = Table.read(h5_file, path='data')
-dat.meta.clear()
-dat.write(fits_file, overwrite=True)
-logger.info('File {} updated'.format(fits_file))
+if __name__ == '__main__':
+    main()
