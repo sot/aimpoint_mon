@@ -13,6 +13,7 @@ import argparse
 import warnings
 
 import numpy as np
+import astropy.units as u
 from astropy.table import Table, vstack
 from mica.starcheck import get_mp_dir
 import Ska.Shell
@@ -255,7 +256,7 @@ def update_observed_aimpoints():
     the delta offset from the planned value.
     """
     # Default is between NOW and NOW - 14 days
-    start = CxoTime(opt.start) - (14 if opt.start is None else 0)
+    start = CxoTime(opt.start) - (14 if opt.start is None else 0) * u.day
     stop = CxoTime(opt.stop)
 
     # Get science obsids
