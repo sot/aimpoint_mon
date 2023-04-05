@@ -92,7 +92,7 @@ def get_asol(info=None):
     normal_suns.interval_pad = 10000, 86400 * 3
     safe_suns.interval_pad = 10000, 86400 * 3
     exclude_intervals = (normal_suns | safe_suns).intervals(asol['time'][0], asol['time'][-1])
-    ok = np.ones(len(asol), dtype=np.bool)
+    ok = np.ones(len(asol), dtype=bool)
     for date0, date1 in exclude_intervals:
         logger.info('Excluding asol values from {} to {} (normal/safe sun)'.format(date0, date1))
         i0, i1 = np.searchsorted(asol['time'], Time([date0, date1], format='yday').cxcsec)
