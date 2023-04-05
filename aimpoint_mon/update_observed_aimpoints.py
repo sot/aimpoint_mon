@@ -13,12 +13,13 @@ import argparse
 import warnings
 
 import numpy as np
+import astropy.units as u
 from astropy.table import Table, vstack
 from mica.starcheck import get_mp_dir
 import Ska.Shell
 import Ska.arc5gl
 from kadi import events
-from Chandra.Time import DateTime
+from cxotime import CxoTime
 import pyyaks.logger
 
 import matplotlib
@@ -255,8 +256,8 @@ def update_observed_aimpoints():
     the delta offset from the planned value.
     """
     # Default is between NOW and NOW - 14 days
-    start = DateTime(opt.start) - (14 if opt.start is None else 0)
-    stop = DateTime(opt.stop)
+    start = CxoTime(opt.start) - (14 if opt.start is None else 0) * u.day
+    stop = CxoTime(opt.stop)
 
     # Get science obsids
     obsids = [evt.obsid for evt in events.obsids.filter(start, stop)
@@ -291,7 +292,7 @@ def update_observed_aimpoints():
                     'chipx={chipx:.1f} chipy={chipy:.1f} dx={dx:.1f} dy={dy:.1f} dr={dr:.1f}'
                     .format(**vals))
         if abs(vals['dx']) > 10 or abs(vals['dy']) > 10:
-            logger.warn('WARNING: large dx or dy')
+            logger.warning('WARNING: large dx or dy')
 
         rows.append(vals)
 
@@ -317,7 +318,7 @@ def plot_observed_aimpoints(obs_aimpoints):
     Make png plot of data in the ``obs_aimpoints`` table.
     """
 
-    dates = DateTime(obs_aimpoints['mean_date'])
+    dates = CxoTime(obs_aimpoints['mean_date'])
     years = dates.frac_year
     times = dates.secs
     ok = years > np.max(years) - float(opt.lookback) / 365.25
@@ -352,11 +353,11 @@ def plot_observed_aimpoints(obs_aimpoints):
                 plot_cxctime(times[nok], obs_aimpoints[axis][nok], marker='*',
                              markerfacecolor=c, **kwargs)
             if np.any(lolims[axis]):
-                plt.errorbar(DateTime(times[lolims[axis]]).plotdate,
+                plt.errorbar(CxoTime(times[lolims[axis]]).plot_date,
                              obs_aimpoints[axis][lolims[axis]], marker='.',
                              markerfacecolor=c, yerr=1.5, lolims=True, **kwargs)
             if np.any(uplims[axis]):
-                plt.errorbar(DateTime(times[uplims[axis]]).plotdate,
+                plt.errorbar(CxoTime(times[uplims[axis]]).plot_date,
                              obs_aimpoints[axis][uplims[axis]], marker='.',
                              markerfacecolor=c, yerr=1.5, uplims=True, **kwargs)
         plt.grid()

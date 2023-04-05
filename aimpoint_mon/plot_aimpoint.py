@@ -92,7 +92,7 @@ def get_asol(info=None):
     normal_suns.interval_pad = 10000, 86400 * 3
     safe_suns.interval_pad = 10000, 86400 * 3
     exclude_intervals = (normal_suns | safe_suns).intervals(asol['time'][0], asol['time'][-1])
-    ok = np.ones(len(asol), dtype=np.bool)
+    ok = np.ones(len(asol), dtype=bool)
     for date0, date1 in exclude_intervals:
         logger.info('Excluding asol values from {} to {} (normal/safe sun)'.format(date0, date1))
         i0, i1 = np.searchsorted(asol['time'], Time([date0, date1], format='yday').cxcsec)
@@ -165,12 +165,6 @@ class AsolBinnedStats(object):
     def ccd(self):
         return 'I3' if self.det.lower().endswith('i') else 'S3'
 
-    @property
-    def argsort(self):
-        if not hasattr(self, '_argsort'):
-            self._argsort = self.grouped.groups.aggregate(np.argsort)
-        return self._argsort
-
     def __getattr__(self, attr):
         """
         If the requested ``attr`` is of the form "p<percentile>_<colname>" for
@@ -183,7 +177,8 @@ class AsolBinnedStats(object):
             _attr = '_' + attr
             if not hasattr(self, _attr):
                 rows = []
-                for group, isort in zip(self.grouped.groups, self.argsort[col]):
+                for group in self.grouped.groups:
+                    isort = np.argsort(group[col])
                     ii = (int(perc) * (len(group) - 1)) // 100
                     rows.append(group[isort[ii]])
                 val = Table(rows=rows, names=self.grouped.colnames)
@@ -221,16 +216,14 @@ class AsolBinnedStats(object):
         t['ybin'] = np.trunc((t['year'] - t['year'][-1] - 0.0001) * 4.0)
 
         # Now group the dx and dy vals in 3-month intervals and find the 50th
-        # and 90th percentile within each time bin.  This again using aggregation,
-        # but this time in a trickier way by returning a Column object as the
-        # aggregation object instead of a single value.
+        # and 90th percentile within each time bin.
         t_bin = t.group_by('ybin')
-        i_sorts = t_bin.groups.aggregate(np.argsort)
         outs = {}
         for col in ('dy', 'dz'):
             for perc in (50, 90, -5):
                 rows = []
-                for group, i_sort in zip(t_bin.groups, i_sorts[col]):
+                for group in t_bin.groups:
+                    i_sort = np.argsort(group[col])
                     if perc < 0:
                         for row in group[i_sort[perc:]]:
                             rows.append(row)
