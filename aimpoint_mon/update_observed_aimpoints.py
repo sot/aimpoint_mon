@@ -292,7 +292,7 @@ def update_observed_aimpoints():
                     'chipx={chipx:.1f} chipy={chipy:.1f} dx={dx:.1f} dy={dy:.1f} dr={dr:.1f}'
                     .format(**vals))
         if abs(vals['dx']) > 10 or abs(vals['dy']) > 10:
-            logger.warn('WARNING: large dx or dy')
+            logger.warning('WARNING: large dx or dy')
 
         rows.append(vals)
 
