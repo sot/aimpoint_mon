@@ -84,7 +84,7 @@ def add_asol_to_h5(filename, asol):
             h5.root.data.append(asol)
         except tables.NoSuchNodeError:
             logger.info('Creating {}'.format(filename))
-            h5.createTable(h5.root, 'data', asol, "Aimpoint drift", expectedrows=1e6)
+            h5.create_table(h5.root, 'data', asol, "Aimpoint drift", expectedrows=1e6)
         h5.root.data.flush()
 
 
