@@ -41,7 +41,7 @@ acis_arcsec_per_pix = 0.492
 
 def get_opt(args=None):
     parser = argparse.ArgumentParser(
-        description="Plot aimpoint drift data " "from aspect solution files"
+        description="Plot aimpoint drift data from aspect solution files"
     )
     parser.add_argument(
         "--start", default="2000:001", help="Processing start date (default=2000:001)"

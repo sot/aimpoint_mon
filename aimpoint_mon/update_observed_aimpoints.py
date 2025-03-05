@@ -6,6 +6,7 @@ in place to reflect information about observed aimpoints, and in particular the 
 offset from the planned value.  This also makes a plot (default 6-months of data) for
 inspection.
 """
+
 import argparse
 import functools
 import glob
@@ -73,7 +74,7 @@ class NoObsidError(ValueError):
 
 def get_opt(args=None):
     parser = argparse.ArgumentParser(
-        description="Plot aimpoint drift data " "from aspect solution files"
+        description="Plot aimpoint drift data from aspect solution files"
     )
     parser.add_argument("--start", help="Processing start date (default=NOW - 14 days)")
     parser.add_argument("--stop", help="Processing stop date (default=NOW)")
