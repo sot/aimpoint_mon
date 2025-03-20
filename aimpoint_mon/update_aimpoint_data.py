@@ -25,7 +25,7 @@ logger = pyyaks.logger.get_logger(
 
 def get_opt():
     parser = argparse.ArgumentParser(
-        description="Get aimpoint drift data " "from aspect solution files"
+        description="Get aimpoint drift data from aspect solution files"
     )
     parser.add_argument(
         "--data-root", default=".", help="Root directory for asol and index files"
