@@ -3,8 +3,9 @@
 """
 Trending application to update the ``OBSERVED_AIMPOINTS_FILE`` table (ascii ECSV format)
 in place to reflect information about observed aimpoints, and in particular the delta
-offset from the planned value.  This also makes a plot (default 6-months of data) for
-inspection.
+offset from the planned value.  This also makes plots (default 6-months of data) for
+inspection, and a two-panel PDF for the POG that excludes large target offsets and
+out-of-bounds observations.
 """
 
 import argparse
@@ -12,6 +13,7 @@ import functools
 import glob
 import os
 import warnings
+from pathlib import Path
 
 import astropy.units as u
 import matplotlib
@@ -26,7 +28,8 @@ from mica.starcheck import get_mp_dir
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from Ska.Matplotlib import plot_cxctime
+from matplotlib.figure import Figure
+from Ska.Matplotlib import plot_cxctime, set_time_ticks
 
 MP_ROOT = "/data/mpcrit1/mplogs"
 OBSERVED_AIMPOINTS_FILE = "observed_aimpoints.dat"
@@ -326,17 +329,100 @@ def update_observed_aimpoints():
     return dat
 
 
+def select_recent(obs_aimpoints: Table, lookback_days: float) -> Table:
+    """
+    Return the rows of ``obs_aimpoints`` within ``lookback_days`` of the newest
+    ``mean_date`` in the table.
+
+    Example::
+
+        >>> recent = select_recent(obs_aimpoints, lookback_days=180)
+    """
+    years = CxoTime(obs_aimpoints["mean_date"]).frac_year
+    return obs_aimpoints[years > np.max(years) - lookback_days / 365.25]
+
+
+def select_pog_aimpoints(
+    obs_aimpoints: Table, max_offset: float = 15.0, max_target_offset: float = 100.0
+) -> Table:
+    """
+    Return the observations to include in the POG plot.
+
+    An observation is kept only if both target offsets (Y and Z) are below
+    ``max_target_offset`` and both aimpoint offsets (``dx`` and ``dy``) are within
+    ``max_offset`` (arcsec).  An observation that is out of bounds in either axis is
+    dropped from both panels.
+
+    Example::
+
+        >>> pog_aimpoints = select_pog_aimpoints(obs_aimpoints)
+    """
+    small_target_offset = (
+        np.abs(obs_aimpoints["target_offset_y"]) < max_target_offset
+    ) & (np.abs(obs_aimpoints["target_offset_z"]) < max_target_offset)
+    in_bounds = (np.abs(obs_aimpoints["dx"]) <= max_offset) & (
+        np.abs(obs_aimpoints["dy"]) <= max_offset
+    )
+    return obs_aimpoints[small_target_offset & in_bounds]
+
+
+def plot_pog_observed_aimpoints(
+    obs_aimpoints: Table, outfile: str | Path, lookback_days: float = 180
+) -> Figure:
+    """
+    Make a two-panel (CHIPX over CHIPY) plot of observed aimpoint offsets for the POG
+    and save it to ``outfile`` (format from the file extension, e.g. PDF).
+
+    Only the last ``lookback_days`` of data are used, and observations excluded by
+    ``select_pog_aimpoints`` are not plotted.  This does not depend on command-line
+    options, so it can be called directly on a synced table::
+
+        >>> obs_aimpoints = Table.read("observed_aimpoints.dat", format="ascii.ecsv")
+        >>> fig = plot_pog_observed_aimpoints(obs_aimpoints, "observed_aimpoints_pog.pdf")
+
+    :returns: matplotlib Figure
+    """
+    pog_aimpoints = select_pog_aimpoints(select_recent(obs_aimpoints, lookback_days))
+    plot_dates = CxoTime(pog_aimpoints["mean_date"]).plot_date
+
+    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(8, 8))
+    for ax, axis, label in zip(axes, ["dx", "dy"], ["CHIPX", "CHIPY"]):
+        for det, color in zip(
+            ["HRC-I", "HRC-S", "ACIS-I", "ACIS-S"], ["cyan", "magenta", "red", "blue"]
+        ):
+            det_ok = pog_aimpoints["detector"] == det
+            if np.any(det_ok):
+                ax.plot(
+                    plot_dates[det_ok],
+                    pog_aimpoints[axis][det_ok],
+                    marker="o",
+                    color=color,
+                    linestyle="",
+                    alpha=0.5,
+                    label=det,
+                )
+        ax.grid()
+        ax.set_ylim(-17, 17)
+        ax.set_ylabel("Offset (arcsec)")
+        ax.set_title("Observed aimpoint offsets {}".format(label))
+        ax.legend(loc="upper left", fontsize="x-small", framealpha=0.5, numpoints=1)
+
+    # Set date ticks once, after all data are on the shared x-axis
+    set_time_ticks(axes[1])
+    fig.autofmt_xdate()
+
+    logger.info("Writing plot file {}".format(outfile))
+    fig.savefig(outfile)
+    return fig
+
+
 def plot_observed_aimpoints(obs_aimpoints):
     """
     Make png plot of data in the ``obs_aimpoints`` table.
     """
 
-    dates = CxoTime(obs_aimpoints["mean_date"])
-    years = dates.frac_year
-    times = dates.secs
-    ok = years > np.max(years) - float(opt.lookback) / 365.25
-    obs_aimpoints = obs_aimpoints[ok]
-    times = times[ok]
+    obs_aimpoints = select_recent(obs_aimpoints, float(opt.lookback))
+    times = CxoTime(obs_aimpoints["mean_date"]).secs
 
     lolims = {}
     uplims = {}
@@ -438,6 +524,11 @@ def main():
 
     obs_aimpoints = update_observed_aimpoints()
     plot_observed_aimpoints(obs_aimpoints)
+    plot_pog_observed_aimpoints(
+        obs_aimpoints,
+        os.path.join(opt.data_root, "observed_aimpoints_pog.pdf"),
+        float(opt.lookback),
+    )
     obs_aimpoints.write(
         os.path.join(opt.data_root, "observed_aimpoints_table.html"),
         format="ascii.html",
