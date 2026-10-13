@@ -464,21 +464,25 @@ def plot_observed_aimpoints(obs_aimpoints):
                     markerfacecolor=c,
                     **kwargs,
                 )
-            if np.any(lolims[axis]):
+            det_lolims = lolims[axis] & det_ok
+            det_uplims = uplims[axis] & det_ok
+            if np.any(det_lolims):
                 plt.errorbar(
-                    CxoTime(times[lolims[axis]]).plot_date,
-                    obs_aimpoints[axis][lolims[axis]],
+                    CxoTime(times[det_lolims]).plot_date,
+                    obs_aimpoints[axis][det_lolims],
                     marker=".",
+                    color=c,
                     markerfacecolor=c,
                     yerr=1.5,
                     lolims=True,
                     **kwargs,
                 )
-            if np.any(uplims[axis]):
+            if np.any(det_uplims):
                 plt.errorbar(
-                    CxoTime(times[uplims[axis]]).plot_date,
-                    obs_aimpoints[axis][uplims[axis]],
+                    CxoTime(times[det_uplims]).plot_date,
+                    obs_aimpoints[axis][det_uplims],
                     marker=".",
+                    color=c,
                     markerfacecolor=c,
                     yerr=1.5,
                     uplims=True,

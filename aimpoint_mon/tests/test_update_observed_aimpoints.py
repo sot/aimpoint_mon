@@ -1,10 +1,14 @@
+import argparse
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from astropy.table import Table
+from matplotlib.colors import to_rgba
+from matplotlib.container import ErrorbarContainer
 
+from aimpoint_mon import update_observed_aimpoints
 from aimpoint_mon.update_observed_aimpoints import (
     plot_pog_observed_aimpoints,
     select_pog_aimpoints,
@@ -79,3 +83,32 @@ def test_plot_pog_observed_aimpoints_plots_only_pog_points(
     assert axes_chipx.get_title() == "Observed aimpoint offsets CHIPX"
     assert axes_chipy.get_title() == "Observed aimpoint offsets CHIPY"
     plt.close(fig)
+
+
+def test_plot_observed_aimpoints_draws_each_limit_arrow_once_in_detector_color(
+    obs_aimpoints: Table, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        update_observed_aimpoints,
+        "opt",
+        argparse.Namespace(data_root=tmp_path, lookback=180, start=None, stop=None),
+    )
+
+    update_observed_aimpoints.plot_observed_aimpoints(obs_aimpoints)
+
+    # The only out-of-range point on each axis is ACIS-I: 30435 has dx = 513 (CHIPX,
+    # figure 1) and 32344 has dy = -20 (CHIPY, figure 2). Each is clipped to +/-15
+    # and should get one limit arrow, drawn in the ACIS-I color.
+    for fig_num, clipped_offset in ((1, 15.0), (2, -15.0)):
+        axes = plt.figure(fig_num).axes[0]
+        errorbars = [
+            container
+            for container in axes.containers
+            if isinstance(container, ErrorbarContainer)
+        ]
+        assert len(errorbars) == 1
+        data_line, _, (bar_lines,) = errorbars[0].lines
+        assert np.allclose(data_line.get_ydata(), [clipped_offset])
+        assert to_rgba(data_line.get_color()) == to_rgba("red")
+        assert np.allclose(bar_lines.get_color(), [to_rgba("red")])
+        plt.close(fig_num)
